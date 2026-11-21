@@ -149,12 +149,18 @@ workflow, and the chip follows it ("Starting collector…", "Collecting… 2 of
 4", then "Collected: 1 new review") from GitHub's run status and the
 `collection_run` table. Each run collects, then classifies new reviews.
 
-**Verified:** a GitHub-hosted run got through Booking.com (4/4 properties, ~50
-seconds), and the deployed-mode button was tested end to end — both runs
-picked up a real new review. One run passing does not guarantee Booking.com
-will never challenge these machines; if it does, runs are recorded as failed
-(the freshness dot turns red), nothing is deleted, and collection can fall
-back to a local machine. Nothing is done to get around a challenge.
+**What was actually observed on GitHub Actions (21 Nov 2026):** the first
+three GitHub-hosted runs got through Booking.com — 4/4 properties, ~50 seconds,
+two of them picking up a real new review, one triggered from the deployed
+site's button. After roughly six runs in 45 minutes, later runs loaded the
+property pages (correct titles) but the "Read all reviews" control never
+appeared, so 3–4 of 4 properties failed; the same code run from a home
+connection at the same moment succeeded. That pattern is consistent with
+Booking.com degrading pages for repeated data-centre traffic, though it is not
+proven. **So hosted collection is best-effort, not guaranteed.** Failures are
+recorded per property (the freshness dot turns red), nothing is deleted, the
+log records the page title and any WAF/captcha markers, and the reliable
+fallback is a local run. Nothing is done to get around it.
 
 **Every 6 hours** because the portfolio gets ~3 reviews a day and the
 dashboard reports by week: fresh enough, and four short runs a day stay light
