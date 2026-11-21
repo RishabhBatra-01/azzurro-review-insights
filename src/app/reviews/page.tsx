@@ -1,5 +1,6 @@
 import Form from "next/form";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import "server-only";
 import {
   allProperties,
@@ -9,7 +10,7 @@ import {
 } from "../../db/queries";
 import { PageHero } from "../../components/hero";
 import { CoverageStrip } from "../../components/coverage";
-import { recentWeeks } from "../../insights/weeks";
+import { isIsoDate, recentWeeks } from "../../insights/weeks";
 import { TREND_WEEKS } from "../data";
 import { SpotlightField } from "../../components/motion";
 import { PageTransition } from "../../components/page-transition";
@@ -39,10 +40,14 @@ export default async function ReviewsPage({
     "positive" | "neutral" | "negative" | undefined;
   const topic = one(params.topic);
   const polarity = one(params.polarity) as "positive" | "negative" | undefined;
-  const from = one(params.from);
-  const to = one(params.to);
+  // Dates come from the URL and can be anything. A value that is not a real
+  // date is ignored, exactly as if that filter had not been set.
+  const fromParam = one(params.from);
+  const toParam = one(params.to);
+  const from = isIsoDate(fromParam) ? fromParam : undefined;
+  const to = isIsoDate(toParam) ? toParam : undefined;
   const search = one(params.q);
-  const page = Math.max(1, Number(one(params.page) ?? 1) || 1);
+  const page = Math.max(1, Math.floor(Number(one(params.page) ?? 1)) || 1);
 
   const propertyId = propertyParam ? Number(propertyParam) : undefined;
 
@@ -67,6 +72,9 @@ export default async function ReviewsPage({
 
   const names = new Map(properties.map((p) => [p.id, p.assessment_label]));
   const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  // Past the end (an old bookmark after the results shrank): go to the last
+  // page that exists rather than show an empty or broken one.
+  if (page > lastPage) redirect(pageUrl(params, lastPage));
   const hasFilters = Boolean(
     propertyParam || band || topic || from || to || search,
   );
@@ -556,16 +564,9 @@ function PageLink({
     );
   }
 
-  const next = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    const v = one(value);
-    if (v && key !== "page") next.set(key, v);
-  }
-  next.set("page", String(page));
-
   return (
     <Link
-      href={`/reviews?${next.toString()}`}
+      href={pageUrl(params, page)}
       className={`inline-flex items-center gap-1.5 text-sm font-medium text-[var(--accent)] ${
         direction === "prev" ? "m-arrow-prev" : "m-arrow-next"
       }`}
@@ -575,4 +576,16 @@ function PageLink({
       {direction === "next" ? arrow : null}
     </Link>
   );
+}
+
+/** The current filters with a different page number. */
+function pageUrl(params: SearchParams, page: number): string {
+  const next = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    const v = one(value);
+    if (v && key !== "page") next.set(key, v);
+  }
+  if (page > 1) next.set("page", String(page));
+  const qs = next.toString();
+  return qs ? `/reviews?${qs}` : "/reviews";
 }

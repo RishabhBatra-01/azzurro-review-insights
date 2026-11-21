@@ -357,7 +357,7 @@ These choices are deliberate and are stated on screen as well as here.
 | Thing | Definition |
 | --- | --- |
 | Week | **Monday 00:00 – Sunday 23:59, Australia/Sydney** |
-| Current week | the week containing today in Sydney |
+| Current week | the week containing today in Sydney, unless another week is picked on the Overview |
 | Date used | the **review** date, not the stay date |
 | Positive | score **≥ 8.0** |
 | Neutral | **6.0 – 7.9** |
@@ -452,6 +452,41 @@ A fixed left sidebar and a single overview screen, with the review feed on its
 own page. The overview reads top to bottom: the week's headline figures, the
 four properties side by side, rating trend, what guests actually said, then the
 operational topics.
+
+### Filters
+
+**Overview: property and week.** Two pickers in the header choose one property
+(or all four) and which Mon–Sun week counts as "this week", back about three
+years. The choice is kept in the URL (`/?property=2&week=2026-10-12`), so a view
+can be bookmarked or shared.
+
+- Every headline figure, the week-over-week change, the trend charts, topic
+  movement, operational topics and recent reviews are worked out from **one
+  filtered set of reviews** (`scoped` in `src/app/data.ts`), so no panel can
+  show all properties while the page says one. Checked against figures
+  calculated directly from the database for four different property and week
+  combinations, back to 2024: every number matched.
+- Labels follow the view: "Potts Point rating, week of 12 Oct", "that week",
+  "the week before", and the year is shown for any week outside the current
+  year.
+- The property cards, the rating-by-property chart and the map always show all
+  four properties, because comparing them is their job; the chosen property is
+  outlined or highlighted.
+- Links into the Reviews page carry the same property and, for a past week, the
+  same dates, so a drill-down lists the reviews behind the number.
+- The Overview works in whole weeks rather than any start and end date, because
+  every figure on it is "this week against the week before". The Reviews page
+  keeps free From/To dates.
+- An unknown property, an impossible date, a future week or one older than the
+  picker offers falls back to the default view (all properties, this week).
+
+**Reviews: property, dates, rating band, topic and text.** Also kept in the URL.
+A date that is not a real calendar date is ignored rather than sent to the
+database, and a page number past the end goes to the last page that exists.
+
+**Per-property change.** Each property card shows that property's own change
+against the week before, or "Too few to compare" when either week has fewer
+than three rated reviews, using the same comparison as the headline figure.
 
 ### Design decisions, and why
 

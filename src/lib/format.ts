@@ -13,6 +13,21 @@ export function formatRange(range: DateRange): string {
   return `${dayMonth.format(start)} – ${dayMonth.format(end)}`;
 }
 
+/**
+ * A week range that says its year whenever it is not the current one, so a
+ * week from last year can never be mistaken for the same dates this year. A
+ * week crossing New Year names both years.
+ */
+export function formatWeek(range: DateRange, currentYear: string): string {
+  const startYear = range.start.slice(0, 4);
+  const endYear = range.end.slice(0, 4);
+  if (startYear !== endYear) {
+    const [from, to] = formatRange(range).split(' – ');
+    return `${from} ${startYear} – ${to} ${endYear}`;
+  }
+  return startYear === currentYear ? formatRange(range) : `${formatRange(range)} ${startYear}`;
+}
+
 export function formatDateLong(iso: string): string {
   return new Intl.DateTimeFormat('en-AU', {
     day: 'numeric',

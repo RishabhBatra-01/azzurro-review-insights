@@ -28,17 +28,27 @@ export async function allProperties(): Promise<PropertyRow[]> {
   return (data ?? []) as PropertyRow[];
 }
 
-/** Reviews on or after `since`. Paged, because PostgREST caps at 1000 rows. */
-export async function reviewsSince(since: string): Promise<ReviewRow[]> {
+/**
+ * Reviews on or after `since` (and up to `until`, when given). Paged, because
+ * PostgREST caps at 1000 rows.
+ */
+export async function reviewsSince(
+  since: string,
+  until?: string,
+): Promise<ReviewRow[]> {
   const rows: ReviewRow[] = [];
   for (let from = 0; ; from += PAGE) {
-    const { data, error } = await db()
+    let query = db()
       .from("review")
       .select(
         "property_id, review_score, reviewed_on_sydney, lang, positive_text, negative_text",
       )
-      .gte("reviewed_on_sydney", since)
+      .gte("reviewed_on_sydney", since);
+    if (until) query = query.lte("reviewed_on_sydney", until);
+    const { data, error } = await query
+      // id breaks ties, so paging cannot skip or repeat rows that share a date.
       .order("reviewed_on_sydney", { ascending: false })
+      .order("id", { ascending: false })
       .range(from, from + PAGE - 1);
     if (error) throw new Error(`reviewsSince failed: ${error.message}`);
     const page = (data ?? []) as ReviewRow[];
@@ -90,13 +100,42 @@ const FEED_COLUMNS =
 export async function searchReviews(
   filters: ReviewFilters,
 ): Promise<{ reviews: FeedReview[]; total: number }> {
+  const { data, error, count } = await filteredReviews(filters, FEED_COLUMNS)
+    .order("reviewed_on_sydney", { ascending: false })
+    .order("id", { ascending: false })
+    .range(filters.offset, filters.offset + filters.limit - 1);
+
+  // A page past the end (an old bookmark after the results shrank) is not an
+  // error for the reader: return no reviews plus the real total, so the page
+  // can send them to the last page that exists.
+  if (error?.code === "PGRST103") {
+    const head = await filteredReviews(filters, "id", true);
+    if (head.error)
+      throw new Error(`searchReviews failed: ${head.error.message}`);
+    return { reviews: [], total: head.count ?? 0 };
+  }
+  if (error) throw new Error(`searchReviews failed: ${error.message}`);
+  return {
+    reviews: (data ?? []) as unknown as FeedReview[],
+    total: count ?? 0,
+  };
+}
+
+/** The review query with every filter applied, shared by the page and its count. */
+function filteredReviews(
+  filters: ReviewFilters,
+  columns: string,
+  headOnly = false,
+) {
   // An inner join on review_topic is only applied when filtering by topic, so
   // the common case stays a single-table read.
   const select = filters.topic
-    ? `${FEED_COLUMNS}, review_topic!inner(topic, polarity)`
-    : FEED_COLUMNS;
+    ? `${columns}, review_topic!inner(topic, polarity)`
+    : columns;
 
-  let query = db().from("review").select(select, { count: "exact" });
+  let query = db()
+    .from("review")
+    .select(select, { count: "exact", head: headOnly });
 
   if (filters.propertyId !== undefined)
     query = query.eq("property_id", filters.propertyId);
@@ -125,17 +164,7 @@ export async function searchReviews(
       );
     }
   }
-
-  const { data, error, count } = await query
-    .order("reviewed_on_sydney", { ascending: false })
-    .order("id", { ascending: false })
-    .range(filters.offset, filters.offset + filters.limit - 1);
-
-  if (error) throw new Error(`searchReviews failed: ${error.message}`);
-  return {
-    reviews: (data ?? []) as unknown as FeedReview[],
-    total: count ?? 0,
-  };
+  return query;
 }
 
 /**

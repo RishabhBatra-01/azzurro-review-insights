@@ -79,9 +79,18 @@ function PropertyTooltip({
   );
 }
 
-export function RatingByProperty({ data }: { data: PropertyDatum[] }) {
+export function RatingByProperty({
+  data,
+  highlight = null,
+}: {
+  data: PropertyDatum[];
+  /** Index of the property the Overview is filtered to, kept at full
+   *  strength while the others ease back. Hovering still takes over. */
+  highlight?: number | null;
+}) {
   const scored = data.filter((d) => d.average !== null);
-  const [active, setActive] = useState<number | null>(null);
+  const [hovered, setActive] = useState<number | null>(null);
+  const active = hovered ?? highlight;
 
   if (scored.length === 0) {
     return (

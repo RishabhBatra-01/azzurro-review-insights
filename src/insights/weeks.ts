@@ -68,13 +68,35 @@ export function previousWeek(now: Date = new Date()): DateRange {
 
 /** Most recent `count` weeks, oldest first, ending with the current week. */
 export function recentWeeks(count: number, now: Date = new Date()): DateRange[] {
-  const thisWeekStart = currentWeek(now).start;
+  return weeksEndingWith(count, currentWeek(now));
+}
+
+/** `count` weeks, oldest first, ending with the given week. */
+export function weeksEndingWith(count: number, last: DateRange): DateRange[] {
   const weeks: DateRange[] = [];
   for (let i = count - 1; i >= 0; i -= 1) {
-    const start = addDays(thisWeekStart, -7 * i);
+    const start = addDays(last.start, -7 * i);
     weeks.push({ start, end: addDays(start, 6) });
   }
   return weeks;
+}
+
+/** The week before the given one. */
+export function weekBefore(week: DateRange): DateRange {
+  const start = addDays(week.start, -7);
+  return { start, end: addDays(start, 6) };
+}
+
+/**
+ * True only for a real calendar date written as YYYY-MM-DD. Dates arrive from
+ * URLs, so "2026-13-45" or "abc" must be caught here rather than reach the
+ * database, which rejects them with an error that would take the page down.
+ */
+export function isIsoDate(value: string | null | undefined): value is string {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [y, m, d] = value.split('-').map(Number) as [number, number, number];
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
 }
 
 export function isWithin(isoDate: string, range: DateRange): boolean {

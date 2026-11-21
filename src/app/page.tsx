@@ -34,6 +34,8 @@ import {
 } from "../components/motion";
 import { PAGE_NAV, PageTransition } from "../components/page-transition";
 import { PropertyMap } from "../components/property-map";
+import { OverviewFilters } from "../components/overview-filters";
+import { selectableWeeks } from "./overview-view";
 import { CollectionStatus } from "../components/collection-status";
 import { collectionMode } from "../collector/trigger";
 import {
@@ -50,7 +52,13 @@ import {
 } from "../components/ui";
 import { RatingByProperty, WeeklyRatingTrend } from "../components/charts";
 import { TrendChart } from "../components/trend-chart";
-import { formatRange, formatRelativeDay, shortLabel } from "../lib/format";
+import {
+  formatRange,
+  formatDateLong,
+  formatRelativeDay,
+  formatWeek,
+  shortLabel,
+} from "../lib/format";
 import { TOPICS, TOPIC_LABELS, type Topic } from "../insights/topics";
 import { band, LOW_DATA_THRESHOLD } from "../insights/scoring";
 import { todayInSydney } from "../insights/weeks";
@@ -69,14 +77,65 @@ const TOPIC_ICON: Record<Topic, typeof Sparkle> = {
   value: Tag,
 };
 
-export default async function OverviewPage() {
-  const data = await loadOverview();
-  const { overall, current, previous, coverage } = data;
+type SearchParams = Record<string, string | string[] | undefined>;
+const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+
+export default async function OverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
+  const data = await loadOverview({
+    property: one(params.property),
+    week: one(params.week),
+  });
+  const { overall, current, previous, coverage, view } = data;
   const today = todayInSydney();
   const nameOf = new Map(
     data.properties.map((p) => [p.id, p.assessment_label]),
   );
   const weekCount = data.weeks.length;
+
+  // What the page is showing, in words. Every label that used to say "this
+  // week" or "portfolio" reads from here, so a filtered view never mislabels
+  // itself as the default one.
+  const selectedName =
+    view.propertyId === null ? null : (nameOf.get(view.propertyId) ?? null);
+  const scope = selectedName ?? "Portfolio";
+  const scopeLower = selectedName ?? "portfolio";
+  const words = view.isCurrentWeek
+    ? {
+        thisWeek: "this week",
+        thisWeeks: "this week's",
+        lastWeek: "last week",
+        prevWeek: "the previous week",
+      }
+    : {
+        thisWeek: "that week",
+        thisWeeks: "that week's",
+        lastWeek: "the week before",
+        prevWeek: "the week before",
+      };
+  const weekLabel = view.isCurrentWeek
+    ? "this week"
+    : `, week of ${formatDateLong(current.start).replace(
+        ` ${today.slice(0, 4)}`,
+        "",
+      )}`;
+
+  // Links into the Reviews page carry the same property and, for a past week,
+  // the same dates, so a drill-down shows the reviews behind the number.
+  const reviewsHref = (extra: Record<string, string> = {}) => {
+    const q = new URLSearchParams(extra);
+    if (view.propertyId !== null) q.set("property", String(view.propertyId));
+    if (!view.isCurrentWeek) {
+      q.set("from", current.start);
+      q.set("to", current.end);
+    }
+    const qs = q.toString();
+    return qs ? `/reviews?${qs}` : "/reviews";
+  };
 
   const propertyData = data.byProperty.map((p) => {
     const name = nameOf.get(p.propertyId) ?? "Unknown";
@@ -87,6 +146,8 @@ export default async function OverviewPage() {
       average: p.current.average,
       reviews: p.current.reviewCount,
       band: band(p.current.average),
+      delta: p.delta,
+      direction: p.direction,
       trend: data.propertyTrends.get(p.propertyId) ?? [],
     };
   });
@@ -108,7 +169,11 @@ export default async function OverviewPage() {
           <PageHero
             eyebrow="Hotel review analytics"
             title="Portfolio Overview"
-            subtitle="Guest review performance, trends and operational issues across the four Sydney properties."
+            subtitle={
+              selectedName
+                ? `Guest review performance, trends and operational issues for ${selectedName}.`
+                : "Guest review performance, trends and operational issues across the four Sydney properties."
+            }
             aside={
               collection?.lastFinishedAt ? (
                 <CollectionStatus
@@ -122,14 +187,24 @@ export default async function OverviewPage() {
               ) : null
             }
           >
-            <div className="mt-5 flex flex-wrap items-center gap-2">
+            <OverviewFilters
+              properties={data.properties}
+              weeks={selectableWeeks()}
+              propertyId={view.propertyId}
+              weekStart={current.start}
+              isDefault={view.propertyId === null && view.isCurrentWeek}
+            />
+            {/* States the view in words, so what the numbers cover is never left
+    to the reader to infer from the controls. */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               <Pill>
                 <CalendarBlank size={14} weight="duotone" aria-hidden="true" />
-                {formatRange(current)} · Mon–Sun, Sydney
+                {view.isCurrentWeek ? "This week" : "Week"}:{" "}
+                {formatWeek(current, today.slice(0, 4))} · Mon–Sun, Sydney
               </Pill>
               <Pill>
                 <Buildings size={14} weight="duotone" aria-hidden="true" />
-                {data.properties.length} properties
+                {selectedName ?? `All ${data.properties.length} properties`}
               </Pill>
             </div>
 
@@ -145,7 +220,10 @@ export default async function OverviewPage() {
                   >
                     <Star size={16} weight="duotone" />
                   </span>
-                  <p className="eyebrow">Portfolio rating this week</p>
+                  <p className="eyebrow">
+                    {scope} rating{view.isCurrentWeek ? " " : ""}
+                    {weekLabel}
+                  </p>
                 </div>
 
                 <div className="mt-4 flex flex-wrap items-end gap-x-3 gap-y-2">
@@ -177,8 +255,8 @@ export default async function OverviewPage() {
                     />
                   </div>
                   <p className="mt-2 text-[11px] text-[var(--muted)]">
-                    {weekCount}-week portfolio average · this week from{" "}
-                    {overall.current.scoredCount} rated review
+                    {weekCount}-week {scopeLower} average · {words.thisWeek}{" "}
+                    from {overall.current.scoredCount} rated review
                     {overall.current.scoredCount === 1 ? "" : "s"}
                   </p>
                 </div>
@@ -234,7 +312,9 @@ export default async function OverviewPage() {
               <KpiCard
                 icon={<ChatCircleDots size={16} weight="duotone" />}
                 tint="var(--topic-staff)"
-                label="Reviews this week"
+                label={
+                  view.isCurrentWeek ? "Reviews this week" : "Reviews that week"
+                }
                 value={<CountUp value={overall.current.reviewCount} />}
                 badge={
                   <DeltaBadge
@@ -249,7 +329,7 @@ export default async function OverviewPage() {
                     decimals={0}
                   />
                 }
-                hint={`${overall.previous.reviewCount} the previous week`}
+                hint={`${overall.previous.reviewCount} ${words.prevWeek}`}
               />
               {/* The reference design's "review coverage" was a share of
                 eligible stays. We hold no stay data, so this reports what we
@@ -274,7 +354,11 @@ export default async function OverviewPage() {
             {propertyData.map((p) => (
               <Link
                 key={p.id}
-                href={`/reviews?property=${p.id}`}
+                href={
+                  view.isCurrentWeek
+                    ? `/reviews?property=${p.id}`
+                    : `/reviews?property=${p.id}&from=${current.start}&to=${current.end}`
+                }
                 transitionTypes={PAGE_NAV}
                 className="block"
               >
@@ -287,7 +371,9 @@ export default async function OverviewPage() {
                   <Card
                     linked
                     padded={false}
-                    className="spotlight group h-full p-4"
+                    className={`spotlight group h-full p-4 ${
+                      p.id === view.propertyId ? "selected-card" : ""
+                    }`}
                   >
                     <div className="flex items-center gap-3">
                       {/* A monogram, not a photograph: we hold no licensed images
@@ -299,8 +385,8 @@ export default async function OverviewPage() {
                         </p>
                         <p className="text-[11px] text-[var(--muted)]">
                           {p.reviews === 0
-                            ? "no reviews this week"
-                            : `${p.reviews} review${p.reviews === 1 ? "" : "s"} this week`}
+                            ? `no reviews ${words.thisWeek}`
+                            : `${p.reviews} review${p.reviews === 1 ? "" : "s"} ${words.thisWeek}`}
                         </p>
                       </div>
                       <ArrowRight
@@ -312,19 +398,26 @@ export default async function OverviewPage() {
                     </div>
 
                     <div className="mt-4 flex items-end justify-between gap-3">
-                      <span className="flex items-baseline gap-1.5">
-                        {p.band ? (
-                          <span
-                            aria-hidden="true"
-                            className="h-2 w-2 self-center rounded-full"
-                            style={{ background: `var(--series-${p.band})` }}
-                          />
-                        ) : null}
-                        <span className="numeral text-[1.75rem] leading-none">
-                          {p.average === null ? "—" : p.average.toFixed(1)}
+                      <span className="flex flex-col gap-1.5">
+                        <span className="flex items-baseline gap-1.5">
+                          {p.band ? (
+                            <span
+                              aria-hidden="true"
+                              className="h-2 w-2 self-center rounded-full"
+                              style={{ background: `var(--series-${p.band})` }}
+                            />
+                          ) : null}
+                          <span className="numeral text-[1.75rem] leading-none">
+                            {p.average === null ? "—" : p.average.toFixed(1)}
+                          </span>
+                          <span className="text-xs text-[var(--muted)]">
+                            / 10
+                          </span>
                         </span>
-                        <span className="text-xs text-[var(--muted)]">
-                          / 10
+                        {/* This property's own change on its previous week, from
+                          the same comparison as the headline figure. */}
+                        <span>
+                          <DeltaBadge delta={p.delta} direction={p.direction} />
                         </span>
                       </span>
                       <Sparkline
@@ -350,7 +443,7 @@ export default async function OverviewPage() {
               <SectionHeading
                 icon={<MapPin size={17} weight="duotone" />}
                 title="Where the properties are"
-                note="pins coloured by this week's rating band · select one for its reviews"
+                note={`pins coloured by ${words.thisWeeks} rating band · select one for its reviews`}
               />
               <PropertyMap pins={propertyData} />
             </Card>
@@ -366,10 +459,17 @@ export default async function OverviewPage() {
             <Card className="spotlight flex flex-col">
               <SectionHeading
                 title="Rating by property"
-                note="this week"
+                note={words.thisWeek}
                 icon={<ChartBar size={17} weight="duotone" />}
               />
-              <RatingByProperty data={propertyData} />
+              <RatingByProperty
+                data={propertyData}
+                highlight={
+                  view.propertyId === null
+                    ? null
+                    : propertyData.findIndex((p) => p.id === view.propertyId)
+                }
+              />
               <Note>
                 Bars are coloured by band: blue 8 and above, grey 6&ndash;7.9,
                 red below 6.
@@ -396,10 +496,14 @@ export default async function OverviewPage() {
             <Card className="spotlight flex flex-col">
               <SectionHeading
                 icon={<ChatCircleDots size={17} weight="duotone" />}
-                title="Recent reviews"
+                title={
+                  view.isCurrentWeek
+                    ? "Recent reviews"
+                    : "Latest reviews that week"
+                }
                 action={
                   <Link
-                    href="/reviews"
+                    href={reviewsHref()}
                     transitionTypes={PAGE_NAV}
                     className="link-draw m-arrow-next inline-flex items-center gap-1 text-xs font-semibold text-[var(--accent)]"
                   >
@@ -414,7 +518,11 @@ export default async function OverviewPage() {
                 }
               />
               {data.recent.length === 0 ? (
-                <Note>No reviews collected yet.</Note>
+                <Note>
+                  {view.isCurrentWeek
+                    ? "No reviews collected yet."
+                    : "No reviews that week."}
+                </Note>
               ) : (
                 <FreshScope ids={data.recent.map((r) => r.id)}>
                   <ul className="divide-y divide-[var(--border)]">
@@ -483,14 +591,18 @@ export default async function OverviewPage() {
             <MoverPanel
               kind="negative"
               title="Complaints rising"
-              subtitle="Topics guests raised more often than last week"
+              subtitle={`Topics guests raised more often than ${words.lastWeek}`}
               movement={data.complaintMovement}
+              words={words}
+              href={(topic) => reviewsHref({ topic, polarity: "negative" })}
             />
             <MoverPanel
               kind="positive"
               title="Praise rising"
-              subtitle="Topics guests praised more often than last week"
+              subtitle={`Topics guests praised more often than ${words.lastWeek}`}
               movement={data.praiseMovement}
+              words={words}
+              href={(topic) => reviewsHref({ topic, polarity: "positive" })}
             />
           </section>
 
@@ -504,13 +616,13 @@ export default async function OverviewPage() {
             <SectionHeading
               icon={<Gauge size={17} weight="duotone" />}
               title="Operational topics"
-              note="share of each topic's mentions that were praise, this week"
+              note={`share of each topic's mentions that were praise, ${words.thisWeek}`}
             />
             <Card className="spotlight">
               {data.topics.stats.length === 0 ? (
                 <Note>
-                  No reviews this week carried English text, so no topics could
-                  be read.
+                  No reviews {words.thisWeek} carried English text, so no topics
+                  could be read.
                 </Note>
               ) : (
                 <Reveal>
@@ -522,7 +634,7 @@ export default async function OverviewPage() {
                       return (
                         <li key={t.topic}>
                           <Link
-                            href={`/reviews?topic=${t.topic}`}
+                            href={reviewsHref({ topic: t.topic })}
                             transitionTypes={PAGE_NAV}
                             className="group block h-full rounded-xl border border-[var(--border)] bg-[var(--surface-sunken)] p-3.5 transition-colors hover:border-[var(--border-strong)]"
                           >
@@ -540,7 +652,7 @@ export default async function OverviewPage() {
                                 lowData={t.lowData}
                                 label={`${label}: ${Math.round(t.positiveShare)}% of ${t.mentions} mention${
                                   t.mentions === 1 ? "" : "s"
-                                } this week were praise`}
+                                } ${words.thisWeek} were praise`}
                               />
                             </span>
                             <span className="link-draw mt-3 inline-block text-[13px] font-semibold">
@@ -582,7 +694,7 @@ export default async function OverviewPage() {
                               {TOPIC_LABELS[topic]}
                             </span>
                             <span className="mt-1 block text-[11px] leading-relaxed text-[var(--muted)]">
-                              not mentioned this week
+                              not mentioned {words.thisWeek}
                             </span>
                           </div>
                         </li>
@@ -594,8 +706,8 @@ export default async function OverviewPage() {
               <div className="mt-5 border-t border-[var(--border)] pt-3">
                 <Note>
                   Out of <strong>{data.topics.denominator}</strong> review
-                  {data.topics.denominator === 1 ? "" : "s"} this week written
-                  in English with text.
+                  {data.topics.denominator === 1 ? "" : "s"} {words.thisWeek}{" "}
+                  written in English with text.
                   {data.topics.excluded > 0
                     ? ` ${data.topics.excluded} more had no text or were in another language and could not be read.`
                     : ""}
@@ -639,10 +751,15 @@ function MoverPanel({
   title,
   subtitle,
   movement,
+  words,
+  href,
 }: {
   kind: "positive" | "negative";
   title: string;
   subtitle: string;
+  words: { thisWeek: string; lastWeek: string; prevWeek: string };
+  /** Reviews page link for a topic, carrying the Overview's current view. */
+  href: (topic: string) => string;
   movement: {
     movers: TopicMovement[];
     denominator: number;
@@ -689,14 +806,14 @@ function MoverPanel({
       {rows.length === 0 ? (
         <p className="mt-5 text-sm text-[var(--muted)]">
           Nothing {kind === "negative" ? "complained about" : "praised"} in
-          writing this week.
+          writing {words.thisWeek}.
         </p>
       ) : (
         <ul className="mt-4 space-y-2.5">
           {rows.map((r) => (
             <li key={r.topic}>
               <Link
-                href={`/reviews?topic=${r.topic}&polarity=${kind}`}
+                href={href(r.topic)}
                 transitionTypes={PAGE_NAV}
                 className="group flex items-center justify-between gap-3 rounded -mx-1 px-1 py-1 text-sm transition-colors hover:bg-[var(--surface-sunken)]"
               >
@@ -748,14 +865,14 @@ function MoverPanel({
             <>
               Change in percentage points against {movement.previousDenominator}{" "}
               readable review
-              {movement.previousDenominator === 1 ? "" : "s"} the previous week.
+              {movement.previousDenominator === 1 ? "" : "s"} {words.prevWeek}.
             </>
           ) : (
             <>
               Not enough readable reviews to compare weeks:{" "}
-              {movement.denominator} this week, {movement.previousDenominator}{" "}
-              last week, and {LOW_DATA_THRESHOLD} is the minimum. Counts are
-              shown instead.
+              {movement.denominator} {words.thisWeek},{" "}
+              {movement.previousDenominator} {words.lastWeek}, and{" "}
+              {LOW_DATA_THRESHOLD} is the minimum. Counts are shown instead.
             </>
           )}
         </Note>

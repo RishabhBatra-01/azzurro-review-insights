@@ -1362,3 +1362,57 @@ body {
     animation: ping 2.8s cubic-bezier(0, 0, 0.2, 1) var(--pin-delay) infinite;
   }
 }
+
+/* The property the Overview is filtered to. An outline, not a colour change,
+   so the card's own band colours keep their meaning. */
+.selected-card {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ====================================================== overview filters
+ * Sits on the dark hero band, so the controls are smoked glass like the tiles
+ * around them, and the native option list is told to render dark.
+ */
+.filter-select {
+  min-width: 12rem;
+  max-width: 100%;
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: 10px;
+  padding: 0.45rem 0.75rem;
+  font-size: 13px;
+  color: var(--text);
+  background: rgb(8 13 30 / 0.45);
+  color-scheme: dark;
+  transition: border-color var(--m-in) var(--ease);
+}
+.filter-select:hover {
+  border-color: rgb(255 255 255 / 0.3);
+}
+.filter-select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.filter-apply {
+  border-radius: 999px;
+  padding: 0.5rem 1.1rem;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  transition:
+    filter var(--m-in) var(--ease),
+    transform var(--m-press) var(--ease);
+}
+.filter-apply:hover {
+  filter: brightness(1.1);
+}
+.filter-apply:active {
+  transform: scale(0.97);
+}
+@media (max-width: 480px) {
+  .overview-filters label,
+  .filter-select {
+    width: 100%;
+  }
+}
