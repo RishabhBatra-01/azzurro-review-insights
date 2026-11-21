@@ -7,6 +7,10 @@ operational themes.
 Built for non-technical operations staff: every number on screen states what it
 is measuring and what it is measuring it against.
 
+**Live:** https://azzurro-review-insights-five.vercel.app (Vercel), with
+collection running on GitHub Actions daily at 7am Sydney and from the
+**Collect now** button.
+
 **Current dataset: 9,284 real reviews across all four properties — every
 review Booking.com lists for them.** No synthetic or illustrative data is used
 anywhere.
@@ -281,13 +285,22 @@ guest type · room type · nights · check-in and check-out dates · helpful vot
 - **Duplicates** are prevented by a database constraint,
   `UNIQUE (property_id, external_id)`, with `ON CONFLICT DO UPDATE` — not by
   application logic. Running the collector twice inserts zero rows the second
-  time.
+  time. Both sources (the browser and SearchApi) use Booking.com's own review
+  id, so the same review from either source lands on the same row.
+- **Repeats inside one run** are removed before saving
+  (`dedupeByExternalId` in `src/collector/normalize.ts`). Paging works by
+  offset, so if a guest posts a review mid-run the list shifts by one and a
+  review can appear on two pages. The database would never store it twice, but
+  a single save cannot update the same row twice either, so without this step
+  the whole save for that property would fail.
 - **Incremental updates** sort `NEWEST_FIRST` and stop after **20 consecutive**
   already-known reviews. Twenty rather than one, because sort order is not
   guaranteed to be strictly chronological.
 - **Token expiry** (tokens last roughly 30 minutes) is handled by re-priming the
   session once from a fresh page load before failing.
-- **One property failing never aborts the others**; each is its own transaction.
+- **One property failing never aborts the others.** Each property is
+  collected and saved separately, so a failure is recorded against that
+  property and the run moves on to the next one.
 - **A failed run never deletes existing data.** Every attempt is recorded in
   `collection_run` with status `ok` / `partial` / `failed`.
 
@@ -305,19 +318,35 @@ wrong thing is the real danger, so:
 - **Reject-ratio check** — if more than 20% of a batch fails validation, the run
   fails rather than storing an unreliable slice.
 
-Most recent health check:
+Most recent health check (21 Nov 2026, all 9,284 reviews held):
 
 ```
 property                      stored   ours   booking   diff
 olympic-paddington              125   6.50      6.5   0.00
-venus-potts-point-sydney        600   6.11      6.3   0.19
-venus-surry-hills               600   6.65      6.6   0.05
-chateau-de-venus                600   6.01      6.6   0.59
+venus-potts-point-sydney       2394   7.71      6.3   1.41
+venus-surry-hills              2450   7.82      6.6   1.22
+chateau-de-venus               4315   7.52      6.6   0.92
 ```
 
-Paddington matches exactly, and we hold all 125 of its reviews — independent
-confirmation the pipeline is correct. The others differ because we hold only the
-most recent 600, which skew from the all-time average.
+**How to read this.** Paddington matches exactly: we hold all 125 of its
+reviews, all from 2026, and our plain average equals Booking.com's score.
+
+The other three differ by about one point, and the reason is in the data, not
+the collector. Their ratings have fallen sharply this year:
+
+| property | 2024 average | 2025 average | 2026 average |
+|---|---:|---:|---:|
+| Potts Point | 8.28 | 7.52 | 5.38 |
+| Central Sydney | 8.24 | 7.75 | 5.80 |
+| Darling Harbour | 7.83 | 7.64 | 5.89 |
+
+Our figure is a plain average over three years of reviews, so the good older
+years pull it up. Booking.com's published score sits much closer to the recent
+level, which suggests it gives recent reviews more weight (Booking.com does not
+publish its exact formula). So for these three properties the check confirms
+the scale and the rough level, not an exact match. The tolerance is 1.5 points,
+which still catches the failures that matter (a wrong score scale, a broken
+parser), but would not catch a small, subtle error.
 
 ---
 
@@ -670,22 +699,49 @@ baseline and look ragged in a list of percentages.
 
 ## Known limitations and assumptions
 
-**Collection**
+**Collection: limits that cannot be fixed in code**
 
-- Requires a **visible browser**; headless is refused by the reviews API.
-- Depends on a **private, undocumented** GraphQL operation. Booking.com can
-  change it without notice. The collector is written behind a `ReviewSource`
-  interface so a DOM reader or hosted provider can be swapped in.
-- Booking.com's Terms of Service restrict automated access regardless of what
-  `robots.txt` permits. This is a trial-scope demonstration. **The production
-  route for a hotel group that owns these properties is the Booking.com
-  Extranet**, or the Connectivity Review API via a PMS/channel-manager partner —
-  no WAF, no breakage, no grey area.
-- A routine run reads newest-first and stops at reviews already held, so it
-  never re-reads history; `--full` backfills everything (tested: 7,357 older
-  reviews in one run). Booking.com appears to list only three years of reviews.
-- Review counts shift between runs (Paddington reported 124 then 125; Potts Point
-  2,396 then 2,394), so reviews are both added and removed upstream.
+- **It needs a visible browser.** Booking.com's reviews interface refuses
+  headless browsers ("Request not supported"), so collection runs a real
+  Chrome window: on a Mac it opens on screen, and on GitHub Actions it runs on
+  a virtual screen. That makes it slower than a plain web request.
+- **It depends on an undocumented Booking.com interface.** The collector replays
+  the `ReviewList` request the property page makes itself. Booking.com does not
+  publish or promise this interface and can change it at any time. If it does, the
+  browser collector fails loudly with the reason in the run log. While
+  SearchApi credits last, the newest reviews still arrive through the fallback;
+  without it, the property's dot turns red. Either way it needs a code update. The collector sits behind a `ReviewSource`
+  interface, so a different reader or provider can be swapped in.
+- **Booking.com's Terms of Service restrict automated access**, whatever
+  `robots.txt` allows. No code can change that. This is a trial-scope
+  demonstration. **The production route for a hotel group that owns these
+  properties is the Booking.com Extranet**, or the Connectivity Review API
+  through a PMS or channel-manager partner: no security challenge, no breakage,
+  no grey area. Both need the property owner's access.
+- **Only about three years of reviews are available.** The oldest review
+  Booking.com lists for any of the four properties is from November 2023, and
+  our totals match Booking.com's own counts exactly, so older reviews cannot be
+  collected from the public page.
+
+**Collection: limits that could be fixed, but are deliberately left for now**
+
+- **Edited or removed older reviews are not picked up by the daily run.** A
+  routine run reads newest-first and stops after 20 reviews in a row that are
+  already held, so it never re-reads history. If a guest edits an old review,
+  only a `--full` run picks up the change. If Booking.com removes a review, it
+  stays in our database and nothing flags it: review counts do shift between
+  runs (Paddington reported 124 then 125; Potts Point 2,396 then 2,394), so
+  removals do happen upstream. Fixing this means re-reading the full history
+  regularly (about 25 minutes per run) and marking reviews not seen again.
+- **No automatic retry after a network timeout.** If a page load times out,
+  that property falls back to SearchApi (when configured) or is marked failed
+  for that run. Nothing is lost, and the next scheduled run tries again, but
+  the property waits up to a day unless someone clicks **Collect now**.
+- **The SearchApi fallback has limited credits.** It is a paid service (about 86
+  credits left at the time of writing, 10 reviews per credit). It is used only
+  when the browser collector fails for a property, and then only for that
+  property's newest 30 reviews. Once the credits run out, the fallback stops
+  working and a browser failure means that property is marked failed.
 
 **Data**
 
@@ -705,7 +761,6 @@ baseline and look ragged in a list of percentages.
 - No automated end-to-end browser test of the dashboard.
 - Classifier evaluation was a 35-review read-through, not a formally labelled
   hold-out set with precision/recall figures.
-- No deployed demo yet; runs locally.
 
 ---
 

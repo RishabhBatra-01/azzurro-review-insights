@@ -3,7 +3,7 @@
  * UNIQUE (property_id, external_id), not by logic here.
  */
 import { db } from './client';
-import type { NormalizedReview } from '../collector/normalize';
+import { dedupeByExternalId, type NormalizedReview } from '../collector/normalize';
 import { PROPERTIES, type PropertyConfig } from '../collector/properties';
 
 const UPSERT_BATCH = 500;
@@ -58,9 +58,10 @@ export type UpsertOutcome = { inserted: number; updated: number };
  */
 export async function upsertReviews(
   propertyId: number,
-  reviews: NormalizedReview[],
+  batch: NormalizedReview[],
   alreadyKnown: Set<string>,
 ): Promise<UpsertOutcome> {
+  const reviews = dedupeByExternalId(batch);
   if (reviews.length === 0) return { inserted: 0, updated: 0 };
 
   const now = new Date().toISOString();

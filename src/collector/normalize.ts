@@ -146,3 +146,21 @@ export function normalizeBatch(rawReviews: unknown[]): {
 
   return { valid, rejected };
 }
+
+/**
+ * Drop repeats of the same review within one batch, keeping the first copy.
+ *
+ * Paging by offset can return a review twice when a guest posts a new one
+ * mid-run: the list shifts by one, so the last review on one page reappears at
+ * the top of the next. The database already refuses a second row for the same
+ * review, but one upsert cannot touch the same row twice, so an unfiltered
+ * repeat would fail the whole save for that property.
+ */
+export function dedupeByExternalId(reviews: NormalizedReview[]): NormalizedReview[] {
+  const seen = new Set<string>();
+  return reviews.filter((r) => {
+    if (seen.has(r.external_id)) return false;
+    seen.add(r.external_id);
+    return true;
+  });
+}

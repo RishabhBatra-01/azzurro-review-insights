@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { decodeEntities, normalizeBatch, normalizeReview } from '../src/collector/normalize';
+import { decodeEntities, dedupeByExternalId, normalizeBatch, normalizeReview } from '../src/collector/normalize';
 
 const fixture = JSON.parse(
   readFileSync(new URL('../data/fixtures/review-list-page1.json', import.meta.url), 'utf8'),
@@ -76,5 +76,20 @@ describe('normalizeReview — rejects bad input', () => {
     expect(valid).toHaveLength(1);
     expect(rejected).toHaveLength(1);
     expect(rejected[0]!.reason).toContain('reviewUrl');
+  });
+});
+
+describe('dedupeByExternalId', () => {
+  it('drops a review repeated within one batch, keeping the first copy', () => {
+    const [a, b] = cards.slice(0, 2).map(normalizeReview);
+    const repeat = { ...a!, positive_text: 'second copy' };
+    const result = dedupeByExternalId([a!, b!, repeat]);
+    expect(result.map((r) => r.external_id)).toEqual([a!.external_id, b!.external_id]);
+    expect(result[0]!.positive_text).toBe(a!.positive_text);
+  });
+
+  it('leaves a batch with no repeats unchanged', () => {
+    const batch = cards.slice(0, 5).map(normalizeReview);
+    expect(dedupeByExternalId(batch)).toEqual(batch);
   });
 });
