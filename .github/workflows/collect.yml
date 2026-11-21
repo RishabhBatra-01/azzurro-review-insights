@@ -34,7 +34,10 @@ jobs:
           node-version: 24
           cache: npm
 
-      - run: npm ci
+      # shortcut: `npm install`, not `npm ci`. A lockfile written on macOS omits
+      # optional Linux/WASM packages (an npm bug), so `npm ci` refuses it here.
+      # Switch back to `npm ci` once the lockfile is regenerated on Linux.
+      - run: npm install --no-audit --no-fund
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
