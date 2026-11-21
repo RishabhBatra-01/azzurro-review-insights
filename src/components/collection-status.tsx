@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowClockwise, CloudArrowDown } from "@phosphor-icons/react/dist/ssr";
 
 import type { CollectionStatus as Status } from "../insights/collection";
+import type { CollectionMode } from "../collector/trigger";
 import { formatRelativeTime } from "../lib/format";
 
 type Progress = {
@@ -48,13 +49,15 @@ function summarize(p: Progress): string {
 export function CollectionStatus({
   status,
   renderedAt,
-  canCollect,
+  collectMode,
 }: {
   status: Status & { lastFinishedAt: string };
   /** The server's clock at render, so the first client paint matches it. */
   renderedAt: string;
-  canCollect: boolean;
+  /** Where "Collect now" runs; null hides the button. */
+  collectMode: CollectionMode;
 }) {
+  const canCollect = collectMode !== null;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [now, setNow] = useState(() => new Date(renderedAt));
@@ -179,7 +182,9 @@ export function CollectionStatus({
       <span aria-live="polite" className="min-w-0">
         {collecting ? (
           <span className="font-semibold">
-            Collecting from Booking.com… {collecting.done} of {collecting.total}
+            {collecting.done === 0
+              ? "Starting collector…"
+              : `Collecting from Booking.com… ${collecting.done} of ${collecting.total}`}
           </span>
         ) : message ? (
           <span className="font-semibold">{message}</span>
@@ -202,7 +207,11 @@ export function CollectionStatus({
             type="button"
             onClick={collect}
             disabled={busy}
-            title="Fetch new reviews from Booking.com now. A Chrome window opens while it runs."
+            title={
+              collectMode === "local"
+                ? "Fetch new reviews from Booking.com now. A Chrome window opens while it runs."
+                : "Fetch new reviews from Booking.com now. Runs on GitHub Actions; takes 2–3 minutes."
+            }
             className="refresh-btn flex h-7 items-center gap-1.5 rounded-full px-2.5 font-semibold text-[var(--text-secondary)]"
           >
             <CloudArrowDown

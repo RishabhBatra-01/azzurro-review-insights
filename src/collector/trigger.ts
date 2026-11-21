@@ -1,10 +1,10 @@
 /**
  * Starting a collection from the dashboard's "Collect now" button.
  *
- * Off unless explicitly enabled, and never on a hosted deployment: the
- * collector drives a visible Chrome window (Booking.com refuses headless), so
- * it can only work on the operator's own machine. Enabling it on a public
- * server would also let any visitor make that server hit Booking.com.
+ * Locally, the collector drives a visible Chrome window (Booking.com refuses
+ * headless), so it runs on this machine. On the deployed site it runs on
+ * GitHub Actions instead (see ./github.ts). Either way the route enforces one
+ * run at a time and a cooldown.
  *
  * The run itself is the ordinary CLI — collect, then classify the new reviews —
  * started as a detached process, so it survives the request that launched it
@@ -15,12 +15,24 @@ import { openSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
+import { githubCollectionConfigured } from "./github";
 import { acquireLock, releaseLock, transferLock, type LockInfo } from "./lock";
 
 export const COOLDOWN_MINUTES = 5;
 
-export function uiCollectionEnabled(): boolean {
-  return process.env.ENABLE_UI_COLLECTION === "1" && !process.env.VERCEL;
+/**
+ * How "Collect now" runs here, if at all:
+ *   local  — spawn the collector on this machine (ENABLE_UI_COLLECTION=1,
+ *            never on Vercel: it needs a screen for Chrome)
+ *   github — dispatch the GitHub Actions workflow (deployed site)
+ */
+export type CollectionMode = "local" | "github" | null;
+
+export function collectionMode(): CollectionMode {
+  if (process.env.ENABLE_UI_COLLECTION === "1" && !process.env.VERCEL)
+    return "local";
+  if (githubCollectionConfigured()) return "github";
+  return null;
 }
 
 /** Launches collect + classify. Returns null if a run is already in progress. */
@@ -31,7 +43,10 @@ export async function startCollection(): Promise<LockInfo | null> {
   try {
     const logDir = join(process.cwd(), "data", "raw"); // gitignored
     await mkdir(/*turbopackIgnore: true*/ logDir, { recursive: true });
-    const log = openSync(/*turbopackIgnore: true*/ join(logDir, "ui-collect.log"), "w");
+    const log = openSync(
+      /*turbopackIgnore: true*/ join(logDir, "ui-collect.log"),
+      "w",
+    );
 
     // `;` not `&&`: reviews that did arrive still get classified even if one
     // property failed. The shell is the lock holder; the collector inherits it.

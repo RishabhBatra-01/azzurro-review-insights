@@ -5,11 +5,15 @@
 # disguised. If Booking.com challenges this machine, the run fails and is
 # recorded as failed in collection_run; it is not retried around the block.
 #
-# Manual trigger only until a test run shows Booking.com lets it through.
 name: Collect reviews
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # manual, or the dashboard's "Collect now" button
+  schedule:
+    # Every 6 hours (UTC). ~3 new reviews/day across the portfolio, and a
+    # weekly dashboard, so this keeps data fresh while staying light on
+    # Booking.com. GitHub may start scheduled runs a few minutes late.
+    - cron: "0 */6 * * *"
 
 # One collection at a time; a second trigger waits rather than overlapping.
 concurrency:

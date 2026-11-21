@@ -25,7 +25,7 @@ import { loadOverview } from "./data";
 import { PageHero } from "../components/hero";
 import { CountUp, SpotlightField } from "../components/motion";
 import { CollectionStatus } from "../components/collection-status";
-import { uiCollectionEnabled } from "../collector/trigger";
+import { collectionMode } from "../collector/trigger";
 import {
   Bar,
   Card,
@@ -106,7 +106,7 @@ export default async function OverviewPage() {
                   lastFinishedAt: collection.lastFinishedAt,
                 }}
                 renderedAt={new Date().toISOString()}
-                canCollect={uiCollectionEnabled()}
+                collectMode={collectionMode()}
               />
             ) : null
           }

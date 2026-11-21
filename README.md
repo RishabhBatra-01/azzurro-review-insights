@@ -112,9 +112,9 @@ booking.com property page  (robots-allowed)
   what makes the week maths and classifier unit-testable.
 - `src/components/` take data as props and never fetch.
 - `src/collector/` is a separate CLI. The web app imports only its lock and
-  launcher (`lock.ts`, `trigger.ts`), never the scraper. **The dashboard can
-  start a collection only when `ENABLE_UI_COLLECTION=1` and it is not running on
-  Vercel** — see "Collecting from the dashboard" below.
+  launchers (`lock.ts`, `trigger.ts`, `github.ts`), never the scraper. The
+  dashboard starts a collection locally or by dispatching the GitHub workflow —
+  see "Keeping data fresh" below.
 - The browser never talks to Supabase. Server components render HTML, so no
   database key is ever shipped to the client.
 
@@ -134,30 +134,52 @@ tests/
 
 ## Review collection method
 
-### Collecting from the dashboard (local only)
+### Keeping data fresh: schedule and "Collect now"
 
-With `ENABLE_UI_COLLECTION=1` in `.env.local`, the hero shows a **Collect now**
-button next to Refresh. Clicking it runs the normal CLI — `collect`, then
-`classify` so new reviews appear under topic filters — as a detached process,
-and the chip reports real progress from the run log ("Collecting from
-Booking.com… 2 of 4"), then what changed ("Collected: 3 new reviews" or "no new
-reviews"). A Chrome window opens while it runs; that is the collector, which
-Booking.com requires to be headed. Output goes to `data/raw/ui-collect.log`
-(gitignored).
+Collection runs in two places, with the same code:
 
-It is off by default and refused on Vercel because it can only work on the
-operator's own machine, and on a public server it would let any visitor make the
-server hit Booking.com. When enabled, the route still:
+| | Where it runs | How it starts |
+| --- | --- | --- |
+| **Deployed** | GitHub Actions (`.github/workflows/collect.yml`) — real Chrome on a virtual screen | every 6 hours, or **Collect now** on the deployed site |
+| **Local** | this machine — a Chrome window opens | **Collect now** with `ENABLE_UI_COLLECTION=1`, or `npm run collect` |
 
-- accepts same-origin requests only (403 otherwise), so another website cannot
-  trigger a scrape through a browser that has the dashboard open;
-- allows **one run at a time** across the button, the CLI and any scheduler — a
-  lock file that records the owning process, so a crashed run's lock is
-  reclaimed rather than blocking forever (unit-tested);
-- refuses a new run within **5 minutes** of the last one finishing.
+Vercel itself cannot collect: it has no screen or Chrome, and Booking.com
+refuses headless browsers. So the deployed button asks GitHub to run the
+workflow, and the chip follows it ("Starting collector…", "Collecting… 2 of
+4", then "Collected: 1 new review") from GitHub's run status and the
+`collection_run` table. Each run collects, then classifies new reviews.
 
-Measured on a real run: 47 seconds for all four properties when nothing was new,
-because each property stops after 20 consecutive reviews it already holds.
+**Verified:** a GitHub-hosted run got through Booking.com (4/4 properties, ~50
+seconds), and the deployed-mode button was tested end to end — both runs
+picked up a real new review. One run passing does not guarantee Booking.com
+will never challenge these machines; if it does, runs are recorded as failed
+(the freshness dot turns red), nothing is deleted, and collection can fall
+back to a local machine. Nothing is done to get around a challenge.
+
+**Every 6 hours** because the portfolio gets ~3 reviews a day and the
+dashboard reports by week: fresh enough, and four short runs a day stay light
+on Booking.com. It is one line in the workflow to change.
+
+**The button is open to every visitor** (a deliberate choice: no password).
+The route therefore enforces, for local and GitHub runs alike:
+
+- same-origin requests only (403), so another website cannot trigger a run;
+- **one run at a time** — while any run is active, scheduled or clicked, new
+  requests are refused and the chip shows that run's progress;
+- **5 minutes** between runs.
+
+Worst case that is ~12 runs an hour; if that ever causes trouble, add a
+password to `POST /api/collect`.
+
+**Setup for the deployed button** (Vercel environment variables):
+
+- `GITHUB_REPO` — `owner/repo`
+- `GITHUB_DISPATCH_TOKEN` — a fine-grained GitHub token for **this repository
+  only**, permission **Actions: Read and write**
+
+and repository secrets `SUPABASE_URL` and `SUPABASE_SECRET_KEY` for the
+workflow. Run logs are public on a public repository; they contain property
+names and counts only, and GitHub masks the secrets.
 
 **Refresh** is a different thing: it re-reads the database and says "Already
 up to date" unless a collection has finished since the page loaded.
