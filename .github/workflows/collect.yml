@@ -1,0 +1,49 @@
+# Collect new Booking.com reviews on a GitHub-hosted machine.
+#
+# Booking.com refuses headless browsers, so the collector runs real Chrome on
+# a virtual screen (xvfb) — the same browser and code as a local run, nothing
+# disguised. If Booking.com challenges this machine, the run fails and is
+# recorded as failed in collection_run; it is not retried around the block.
+#
+# Manual trigger only until a test run shows Booking.com lets it through.
+name: Collect reviews
+
+on:
+  workflow_dispatch:
+
+# One collection at a time; a second trigger waits rather than overlapping.
+concurrency:
+  group: collect-reviews
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Collect new reviews
+        run: xvfb-run --auto-servernum npm run collect
+
+      # Runs even if one property failed: reviews that did arrive still get
+      # topic tags.
+      - name: Classify topics
+        if: success() || failure()
+        run: npm run classify
