@@ -93,8 +93,12 @@ export class BookingGraphQLSource implements ReviewSource {
         // Say what the page actually was, so a block is distinguishable from
         // a layout change. Title and a challenge marker only — no page content.
         const html = await page.content().catch(() => '');
-        const challenged = /awsWafCookieDomainList|challenge\.js|captcha/i.test(html);
-        diagnosis = ` [page title: "${(await page.title().catch(() => '')).slice(0, 80)}"; bot challenge: ${challenged ? 'yes' : 'no'}]`;
+        // Markers only, not a verdict: Booking.com pages can carry WAF script
+        // references even when served normally.
+        const markers = ['awsWafCookieDomainList', 'challenge.js', 'captcha'].filter((m) =>
+          html.toLowerCase().includes(m.toLowerCase()),
+        );
+        diagnosis = ` [page title: "${(await page.title().catch(() => '')).slice(0, 80)}"; WAF/captcha markers: ${markers.join(', ') || 'none'}]`;
       }
     } finally {
       await page.close();
