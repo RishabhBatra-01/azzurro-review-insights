@@ -140,7 +140,7 @@ Collection runs in two places, with the same code:
 
 | | Where it runs | How it starts |
 | --- | --- | --- |
-| **Deployed** | GitHub Actions (`.github/workflows/collect.yml`) — real Chrome on a virtual screen | every 6 hours, or **Collect now** on the deployed site |
+| **Deployed** | GitHub Actions (`.github/workflows/collect.yml`) — real Chrome on a virtual screen | daily at 7am Sydney, or **Collect now** on the deployed site |
 | **Local** | this machine — a Chrome window opens | **Collect now** with `ENABLE_UI_COLLECTION=1`, or `npm run collect` |
 
 Vercel itself cannot collect: it has no screen or Chrome, and Booking.com
@@ -184,13 +184,16 @@ engine) instead, if `SEARCHAPI_API_KEY` is set. Decisions and trade-offs:
   the run completed 4/4 via SearchApi using 4 credits. Which channel was used is
   printed in the run log (`via SearchApi`); it is not yet stored per run in the
   database.
-- **Credit budget:** if the browser keeps failing, the 6-hourly schedule uses
-  ~16 credits a day. On the free tier (100/month) that lasts about six days;
-  then requests fail, the run is recorded as failed, and nothing is deleted.
+- **Credit budget:** if the browser keeps failing, the daily schedule uses
+  ~4 credits a day, so the free tier (100/month) lasts about three weeks
+  (button clicks use more). When credits run out, requests fail, the run is
+  recorded as failed, and nothing is deleted.
 
-**Every 6 hours** because the portfolio gets ~3 reviews a day and the
-dashboard reports by week: fresh enough, and four short runs a day stay light
-on Booking.com. It is one line in the workflow to change.
+**Daily, at 7am Sydney,** because the portfolio gets ~3 reviews a day and the
+dashboard reports by week, so the morning shift opening on fresh data is
+enough. It started as every 6 hours and was reduced to daily to stay light on
+Booking.com and within the SearchApi fallback's credits. It is one line in the
+workflow to change; **Collect now** covers anything more urgent.
 
 **The button is open to every visitor** (a deliberate choice: no password).
 The route therefore enforces, for local and GitHub runs alike:

@@ -10,10 +10,12 @@ name: Collect reviews
 on:
   workflow_dispatch: # manual, or the dashboard's "Collect now" button
   schedule:
-    # Every 6 hours (UTC). ~3 new reviews/day across the portfolio, and a
-    # weekly dashboard, so this keeps data fresh while staying light on
-    # Booking.com. GitHub may start scheduled runs a few minutes late.
-    - cron: "0 */6 * * *"
+    # Once a day at 20:00 UTC = 7am Sydney (6am in winter), so the morning
+    # shift opens on fresh data. ~3 new reviews/day across the portfolio and a
+    # weekly dashboard make daily enough; it is also light on Booking.com and
+    # keeps the SearchApi fallback within free-tier credits.
+    # GitHub may start scheduled runs a few minutes late.
+    - cron: "0 20 * * *"
 
 # One collection at a time; a second trigger waits rather than overlapping.
 concurrency:
