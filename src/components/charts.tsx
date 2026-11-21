@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Area,
   AreaChart,
@@ -33,8 +34,54 @@ export type PropertyDatum = {
  * else and makes "who is in the red" readable at a glance, instead of spending
  * four colours on decoration.
  */
+/** Index under the pointer, from a Recharts mouse event; null when off-chart. */
+export const hoveredIndex = (state: { activeTooltipIndex?: unknown }) => {
+  const i = Number(state?.activeTooltipIndex);
+  return Number.isInteger(i) && i >= 0 ? i : null;
+};
+
+/** Hovered bar at full strength, the rest eased back so it stands out. */
+export const dimmed = (active: number | null, i: number) =>
+  active === null || active === i ? 1 : 0.35;
+
+function PropertyTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: { payload?: PropertyDatum }[];
+}) {
+  const d = payload?.[0]?.payload;
+  if (!active || !d) return null;
+  return (
+    <div
+      className="chart-tip rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs"
+      style={{ boxShadow: "var(--shadow-raised)" }}
+    >
+      <p className="font-semibold text-[var(--text)]">{d.name}</p>
+      <p className="mt-1 text-[var(--text-secondary)]">
+        {d.average === null ? (
+          "No rated reviews this week"
+        ) : (
+          <>
+            Average{" "}
+            <span className="font-semibold text-[var(--text)]">
+              {d.average.toFixed(2)}
+            </span>{" "}
+            / 10
+          </>
+        )}
+      </p>
+      <p className="text-[var(--muted)]">
+        {d.reviews} review{d.reviews === 1 ? "" : "s"} this week
+      </p>
+    </div>
+  );
+}
+
 export function RatingByProperty({ data }: { data: PropertyDatum[] }) {
   const scored = data.filter((d) => d.average !== null);
+  const [active, setActive] = useState<number | null>(null);
 
   if (scored.length === 0) {
     return (
@@ -52,6 +99,8 @@ export function RatingByProperty({ data }: { data: PropertyDatum[] }) {
             data={data}
             margin={{ top: 22, right: 4, left: -6, bottom: 0 }}
             barCategoryGap="28%"
+            onMouseMove={(state) => setActive(hoveredIndex(state))}
+            onMouseLeave={() => setActive(null)}
           >
             {/* Band colour runs full strength at the top and eases off
                 towards the baseline. The hue still names the band; the
@@ -101,6 +150,7 @@ export function RatingByProperty({ data }: { data: PropertyDatum[] }) {
               /* 34px, not the default: "10" was being clipped to "0". */
               width={34}
             />
+            <Tooltip content={<PropertyTooltip />} cursor={false} />
             <Bar
               dataKey="average"
               radius={[8, 8, 3, 3]}
@@ -108,9 +158,10 @@ export function RatingByProperty({ data }: { data: PropertyDatum[] }) {
               animationDuration={800}
               animationEasing="ease-out"
             >
-              {data.map((d) => (
+              {data.map((d, i) => (
                 <Cell
                   key={d.name}
+                  fillOpacity={dimmed(active, i)}
                   fill={
                     d.band
                       ? `url(#rating-bar-${d.band})`
@@ -186,7 +237,7 @@ function TrendTooltip({
   if (!active || !point) return null;
   return (
     <div
-      className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs"
+      className="chart-tip rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs"
       style={{ boxShadow: "var(--shadow-raised)" }}
     >
       <p className="font-semibold text-[var(--text)]">Week of {label}</p>

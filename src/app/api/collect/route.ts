@@ -51,6 +51,11 @@ export async function GET(request: NextRequest) {
       failed: runs.filter((r) => r.status === "failed").length,
       inserted: runs.reduce((n, r) => n + r.reviews_inserted, 0),
       updated: runs.reduce((n, r) => n + r.reviews_updated, 0),
+      // In the order they finished, for the progress bar's "Potts Point done".
+      finished: runs.map((r) => ({
+        name: r.property?.assessment_label ?? "A property",
+        ok: r.status !== "failed",
+      })),
     });
   } catch (error) {
     console.error(

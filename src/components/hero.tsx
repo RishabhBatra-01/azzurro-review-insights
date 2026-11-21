@@ -24,6 +24,11 @@ export function PageHero({
         <span />
         <span />
       </div>
+      {/* Two faint beams of light sweeping slowly across the band. */}
+      <div className="beams" aria-hidden="true">
+        <span />
+        <span />
+      </div>
 
       {/* Two columns on wide screens so the aside sits top-right beside the
           title instead of wrapping under it; stacked below xl, where there is
@@ -40,7 +45,9 @@ export function PageHero({
             </p>
           ) : null}
         </div>
-        {aside ? <div className="flex min-w-0 xl:justify-end">{aside}</div> : null}
+        {aside ? (
+          <div className="flex min-w-0 xl:justify-end">{aside}</div>
+        ) : null}
       </div>
 
       {children}

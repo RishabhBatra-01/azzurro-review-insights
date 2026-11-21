@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { PAGE_NAV } from './page-transition';
 import { usePathname } from 'next/navigation';
 import {
   ChartBar,
@@ -70,6 +71,7 @@ function NavRow({
   return (
     <Link
       href={href}
+      transitionTypes={PAGE_NAV}
       aria-current={active ? 'page' : undefined}
       className={`nav-item relative flex items-center gap-3 rounded-lg pl-3 pr-3 ${
         small ? 'py-2 text-[13px]' : 'py-2.5 text-sm font-medium'
@@ -191,6 +193,7 @@ export function MobileNav() {
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  transitionTypes={PAGE_NAV}
                   aria-current={active ? 'page' : undefined}
                   className={`nav-item flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium ${
                     active

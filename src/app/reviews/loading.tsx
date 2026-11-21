@@ -1,5 +1,10 @@
+import { SkeletonTransition } from "../../components/page-transition";
 import { PageSkeleton } from "../../components/ui";
 
 export default function Loading() {
-  return <PageSkeleton cards={3} />;
+  return (
+    <SkeletonTransition>
+      <PageSkeleton variant="reviews" />
+    </SkeletonTransition>
+  );
 }

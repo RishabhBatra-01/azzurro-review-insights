@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 const reducedMotion = () =>
   typeof window !== "undefined" &&
@@ -27,18 +34,28 @@ export function CountUp({
   duration?: number;
 }) {
   const [shown, setShown] = useState(value);
+  // Where the next count starts: zero on first paint, then the previous value,
+  // so new data after a collection re-counts from the old figure to the new one
+  // instead of dropping to zero and climbing all the way back.
+  const from = useRef<number | null>(null);
 
   useEffect(() => {
-    if (reducedMotion()) return;
+    const start = from.current ?? 0;
+    from.current = value;
+    if (reducedMotion() || start === value) {
+      setShown(value);
+      return;
+    }
     let frame = 0;
-    const start = performance.now();
+    const began = performance.now();
     const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / duration);
+      const t = Math.min(1, (now - began) / duration);
       // easeOutExpo: most of the distance early, then a long settle.
-      setShown(value * (t === 1 ? 1 : 1 - Math.pow(2, -10 * t)));
+      const eased = t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+      setShown(start + (value - start) * eased);
       if (t < 1) frame = requestAnimationFrame(tick);
     };
-    setShown(0);
+    setShown(start);
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, [value, duration]);
@@ -94,4 +111,139 @@ export function SpotlightField({ children }: { children: ReactNode }) {
   }, []);
 
   return <div ref={ref}>{children}</div>;
+}
+
+/**
+ * Glows once when `watch` changes after first paint, e.g. a property card whose
+ * figures moved because a collection brought in new reviews. First paint never
+ * glows: on page load nothing has "changed".
+ */
+export function Flash({
+  watch,
+  children,
+  className = "",
+}: {
+  watch: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  const previous = useRef(watch);
+  const [flashing, setFlashing] = useState(false);
+
+  useEffect(() => {
+    if (previous.current === watch) return;
+    previous.current = watch;
+    setFlashing(true);
+    const id = window.setTimeout(() => setFlashing(false), 1800);
+    return () => window.clearTimeout(id);
+  }, [watch]);
+
+  return (
+    <div className={`flash ${className}`} data-flash={flashing || undefined}>
+      {children}
+    </div>
+  );
+}
+
+const FreshIds = createContext<ReadonlySet<number>>(new Set());
+const FRESH_MS = 6000;
+
+/**
+ * Marks items that arrived since the page was first shown, e.g. reviews a
+ * collection just brought in. Ids present on first paint are never "new", so a
+ * plain page load shows no badges. The marks clear themselves after a few
+ * seconds, with or without animation.
+ */
+export function FreshScope({
+  ids,
+  children,
+}: {
+  ids: number[];
+  children: ReactNode;
+}) {
+  const [seen, setSeen] = useState<ReadonlySet<number>>(() => new Set(ids));
+  // Worked out during render, not in an effect, so a new item is marked in the
+  // same paint it appears in rather than flashing unmarked for a frame.
+  const fresh = new Set(ids.filter((id) => !seen.has(id)));
+  const key = [...fresh].join(",");
+
+  useEffect(() => {
+    if (!key) return;
+    const id = window.setTimeout(
+      () => setSeen((s) => new Set([...s, ...ids])),
+      FRESH_MS,
+    );
+    return () => window.clearTimeout(id);
+    // `key` captures exactly the change that matters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  return <FreshIds.Provider value={fresh}>{children}</FreshIds.Provider>;
+}
+
+/** A list item that slides in when FreshScope says it just arrived. */
+export function FreshItem({
+  id,
+  className = "",
+  children,
+}: {
+  id: number;
+  className?: string;
+  children: ReactNode;
+}) {
+  const fresh = useContext(FreshIds).has(id);
+  return (
+    <li className={`${className} ${fresh ? "fresh-in" : ""}`}>{children}</li>
+  );
+}
+
+/** A small "New" tag for an item FreshScope says just arrived. */
+export function FreshBadge({ id }: { id: number }) {
+  if (!useContext(FreshIds).has(id)) return null;
+  return <span className="fresh-badge">New</span>;
+}
+
+/**
+ * Holds back draw-in animations inside it until it scrolls into view, so rings
+ * further down the page fill as the reader reaches them instead of finishing
+ * off-screen. Only the drawing waits: the numbers are rendered from the start.
+ * Content already on screen at load, and every reader who asked for reduced
+ * motion, gets the normal behaviour.
+ */
+export function Reveal({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [state, setState] = useState<"idle" | "armed" | "shown">("idle");
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || reducedMotion() || !("IntersectionObserver" in window)) return;
+    if (el.getBoundingClientRect().top < window.innerHeight) return;
+    setState("armed");
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        setState("shown");
+        observer.disconnect();
+      },
+      { threshold: 0.25 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={className}
+      data-reveal={state === "idle" ? undefined : state}
+    >
+      {children}
+    </div>
+  );
 }

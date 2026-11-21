@@ -390,7 +390,13 @@ export function DeltaBadge({
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${tone}`}
     >
-      <span aria-hidden="true" className="text-[0.85em]">
+      {/* Nudges once in its own direction after the figures finish counting,
+          so "down" reads as movement, not just a glyph. */}
+      <span
+        aria-hidden="true"
+        className="delta-arrow text-[0.85em]"
+        data-dir={flat ? undefined : up ? "up" : "down"}
+      >
         {flat ? "◆" : up ? "▲" : "▼"}
       </span>
       {delta > 0 ? "+" : ""}
@@ -555,37 +561,89 @@ export function Ring({
 
 /** A grey block standing in for content while a route loads. */
 export function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`skeleton ${className}`} aria-hidden="true" />;
+  const rounded = /(^|\s)rounded/.test(className) ? "" : "rounded-lg";
+  return (
+    <div className={`skeleton ${rounded} ${className}`} aria-hidden="true" />
+  );
+}
+
+/** The dark hero band in skeleton form: title block left, status chip right. */
+function HeroSkeleton({
+  chipWidth,
+  children,
+}: {
+  chipWidth: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="hero on-dark px-5 py-6 sm:px-8 sm:py-8">
+      <div className="flex flex-col gap-4 xl:grid xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start xl:gap-x-8">
+        <div>
+          <Skeleton className="h-3 w-40" />
+          <Skeleton className="mt-3 h-11 w-72 max-w-full" />
+          <Skeleton className="mt-3 h-4 w-[34rem] max-w-full" />
+        </div>
+        <Skeleton className={`h-10 rounded-full ${chipWidth} max-w-full`} />
+      </div>
+      {children}
+    </div>
+  );
 }
 
 /**
  * Route-level loading state. Shown the instant a nav link is clicked, so the
  * interface answers the click rather than sitting frozen until the query
- * returns. The shape mirrors the real page so nothing jumps when data lands.
+ * returns. Each page has its own: the shape mirrors the real page, hero band
+ * included, so nothing jumps when the data lands.
  */
-export function PageSkeleton({ cards = 5 }: { cards?: number }) {
+export function PageSkeleton({
+  variant = "overview",
+}: {
+  variant?: "overview" | "reviews";
+}) {
   return (
-    <div className="space-y-8" role="status" aria-label="Loading">
-      <div>
-        <Skeleton className="h-3 w-40" />
-        <Skeleton className="mt-3 h-9 w-72" />
-        <Skeleton className="mt-3 h-4 w-96" />
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }, (_, i) => (
-          <Skeleton key={i} className="h-[66px]" />
-        ))}
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {Array.from({ length: cards }, (_, i) => (
-          <Skeleton key={i} className="h-[132px]" />
-        ))}
-      </div>
-      <div className="grid gap-4 xl:grid-cols-[1fr_1.25fr_0.95fr]">
-        {Array.from({ length: 3 }, (_, i) => (
-          <Skeleton key={i} className="h-[420px]" />
-        ))}
-      </div>
+    <div
+      className={variant === "overview" ? "space-y-8" : "space-y-6"}
+      role="status"
+      aria-label="Loading"
+    >
+      {variant === "overview" ? (
+        <>
+          <HeroSkeleton chipWidth="w-[26rem]">
+            <div className="mt-5 flex gap-2">
+              <Skeleton className="h-7 w-56 rounded-full" />
+              <Skeleton className="h-7 w-28 rounded-full" />
+            </div>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr]">
+              <Skeleton className="h-[260px] rounded-[18px] sm:col-span-2 lg:col-span-1 lg:row-span-2 lg:h-auto" />
+              {Array.from({ length: 4 }, (_, i) => (
+                <Skeleton key={i} className="h-[124px] rounded-[18px]" />
+              ))}
+            </div>
+          </HeroSkeleton>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }, (_, i) => (
+              <Skeleton key={i} className="h-[118px] rounded-[16px]" />
+            ))}
+          </div>
+          <Skeleton className="h-[360px] rounded-[16px]" />
+        </>
+      ) : (
+        <>
+          <HeroSkeleton chipWidth="w-48">
+            <Skeleton className="mt-5 h-4 w-[40rem] max-w-full" />
+            <div className="mt-3 flex flex-wrap gap-2">
+              {Array.from({ length: 4 }, (_, i) => (
+                <Skeleton key={i} className="h-7 w-44 rounded-full" />
+              ))}
+            </div>
+          </HeroSkeleton>
+          <Skeleton className="h-[150px] rounded-[16px]" />
+          {Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className="h-[170px] rounded-[16px]" />
+          ))}
+        </>
+      )}
       <span className="sr-only">Loading dashboard data…</span>
     </div>
   );

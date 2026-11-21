@@ -156,14 +156,18 @@ export async function latestCollection(): Promise<CollectionStatus | null> {
 export async function runsSince(since: string) {
   const { data, error } = await db()
     .from("collection_run")
-    .select("property_id, status, reviews_inserted, reviews_updated")
-    .gte("started_at", since);
+    .select(
+      "property_id, status, reviews_inserted, reviews_updated, property(assessment_label)",
+    )
+    .gte("started_at", since)
+    .order("finished_at", { ascending: true });
   if (error) throw new Error(`runsSince failed: ${error.message}`);
-  return (data ?? []) as {
+  return (data ?? []) as unknown as {
     property_id: number | null;
     status: "ok" | "partial" | "failed";
     reviews_inserted: number;
     reviews_updated: number;
+    property: { assessment_label: string } | null;
   }[];
 }
 

@@ -1,15 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 
+import { dimmed, hoveredIndex } from "./charts";
 import { VisuallyHidden } from "./visually-hidden";
 
 export type TrendDatum = {
@@ -69,7 +72,7 @@ function ChartTooltip({
 
   return (
     <div
-      className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs"
+      className="chart-tip rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs"
       style={{ boxShadow: "var(--shadow-raised)" }}
     >
       <p className="mb-1.5 font-semibold text-[var(--text)]">Week of {label}</p>
@@ -106,6 +109,7 @@ function ChartTooltip({
 }
 
 export function TrendChart({ data }: { data: TrendDatum[] }) {
+  const [active, setActive] = useState<number | null>(null);
   const empty = data.every((d) => d.positive + d.neutral + d.negative === 0);
 
   if (empty) {
@@ -141,6 +145,8 @@ export function TrendChart({ data }: { data: TrendDatum[] }) {
             data={data}
             margin={{ top: 4, right: 4, left: -22, bottom: 0 }}
             barCategoryGap="22%"
+            onMouseMove={(state) => setActive(hoveredIndex(state))}
+            onMouseLeave={() => setActive(null)}
           >
             <CartesianGrid
               strokeDasharray="2 5"
@@ -181,7 +187,13 @@ export function TrendChart({ data }: { data: TrendDatum[] }) {
                 strokeWidth={2}
                 /* Round only the top of the topmost segment. */
                 radius={i === SERIES.length - 1 ? [3, 3, 0, 0] : undefined}
-              />
+              >
+                {/* The hovered week stays full strength; the others ease
+                    back, so the tooltip's week is obvious in the chart. */}
+                {data.map((d, w) => (
+                  <Cell key={d.week} fillOpacity={dimmed(active, w)} />
+                ))}
+              </Bar>
             ))}
           </BarChart>
         </ResponsiveContainer>

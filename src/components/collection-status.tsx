@@ -16,6 +16,8 @@ type Progress = {
   failed: number;
   inserted: number;
   updated: number;
+  /** Properties finished so far, in finishing order. */
+  finished?: { name: string; ok: boolean }[];
 };
 
 const POLL_MS = 3000;
@@ -181,11 +183,7 @@ export function CollectionStatus({
 
       <span aria-live="polite" className="min-w-0">
         {collecting ? (
-          <span className="font-semibold">
-            {collecting.done === 0
-              ? "Starting collector…"
-              : `Collecting from Booking.com… ${collecting.done} of ${collecting.total}`}
-          </span>
+          <CollectProgress progress={collecting} />
         ) : message ? (
           <span className="font-semibold">{message}</span>
         ) : (
@@ -244,5 +242,46 @@ export function CollectionStatus({
         </button>
       </span>
     </div>
+  );
+}
+
+/**
+ * One segment per property, filled as each finishes (red if it failed), and
+ * the name of the property that finished last. All of it is read from the run
+ * log, so the bar only moves when a property has actually been collected.
+ */
+function CollectProgress({ progress }: { progress: Progress }) {
+  const finished = progress.finished ?? [];
+  const latest = finished.at(-1);
+  return (
+    <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+      <span className="font-semibold">
+        {progress.done === 0
+          ? "Starting collector…"
+          : `Collecting from Booking.com… ${progress.done} of ${progress.total}`}
+      </span>
+      <span aria-hidden="true" className="collect-bar">
+        {Array.from({ length: progress.total }, (_, i) => (
+          <span
+            key={i}
+            data-state={
+              i < finished.length
+                ? finished[i]!.ok
+                  ? "ok"
+                  : "failed"
+                : i === finished.length
+                  ? "active"
+                  : undefined
+            }
+          />
+        ))}
+      </span>
+      {latest ? (
+        // Keyed on the name, so each newly finished property ticks in.
+        <span key={latest.name} className="tick-in text-[var(--muted)]">
+          {latest.name} {latest.ok ? "done" : "failed"}
+        </span>
+      ) : null}
+    </span>
   );
 }

@@ -1,3 +1,4 @@
+import Form from "next/form";
 import Link from "next/link";
 import "server-only";
 import {
@@ -11,6 +12,7 @@ import { CoverageStrip } from "../../components/coverage";
 import { recentWeeks } from "../../insights/weeks";
 import { TREND_WEEKS } from "../data";
 import { SpotlightField } from "../../components/motion";
+import { PageTransition } from "../../components/page-transition";
 import { Card, Note, Pill } from "../../components/ui";
 import { band } from "../../insights/scoring";
 import { formatDateLong } from "../../lib/format";
@@ -70,217 +72,232 @@ export default async function ReviewsPage({
   );
 
   return (
-    <SpotlightField>
-      <div className="space-y-6">
-        <PageHero
-          eyebrow="Guest feedback"
-          title="Reviews"
-          subtitle="Every collected review, newest first. Narrow it by property, dates, rating band or operational topic."
-          aside={
-            <div
-              className="glass flex items-baseline gap-2 px-4 py-2.5"
-              style={{ borderRadius: 999 }}
-            >
-              <span className="numeral text-xl leading-none">
-                {total.toLocaleString()}
-              </span>
-              <span className="text-xs text-[var(--muted)]">
-                matching review{total === 1 ? "" : "s"}
-              </span>
-            </div>
-          }
-        >
-          <CoverageStrip
-            coverage={coverage}
-            windowStart={recentWeeks(TREND_WEEKS)[0]?.start ?? ""}
-            windowWeeks={TREND_WEEKS}
-          />
-        </PageHero>
+    <PageTransition>
+      <SpotlightField>
+        <div className="space-y-6">
+          <PageHero
+            eyebrow="Guest feedback"
+            title="Reviews"
+            subtitle="Every collected review, newest first. Narrow it by property, dates, rating band or operational topic."
+            aside={
+              <div
+                className="glass flex items-baseline gap-2 px-4 py-2.5"
+                style={{ borderRadius: 999 }}
+              >
+                <span className="numeral text-xl leading-none">
+                  {total.toLocaleString()}
+                </span>
+                <span className="text-xs text-[var(--muted)]">
+                  matching review{total === 1 ? "" : "s"}
+                </span>
+              </div>
+            }
+          >
+            <CoverageStrip
+              coverage={coverage}
+              windowStart={recentWeeks(TREND_WEEKS)[0]?.start ?? ""}
+              windowWeeks={TREND_WEEKS}
+            />
+          </PageHero>
 
-        {/* What is currently filtered, stated plainly. Arriving here from a topic
+          {/* What is currently filtered, stated plainly. Arriving here from a topic
           on the Overview otherwise shows a filtered list with no visible reason
           for it — the only clue was a <select> further down the page. */}
-        {hasFilters ? (
-          <ActiveFilters
-            params={params}
-            chips={[
-              propertyParam
-                ? {
-                    keys: ["property"],
-                    label: "Property",
-                    value: names.get(Number(propertyParam)) ?? propertyParam,
-                  }
-                : null,
-              band
-                ? {
-                    keys: ["band"],
-                    label: "Rating",
-                    value: BAND_FILTER_LABEL[band] ?? band,
-                  }
-                : null,
-              topic
-                ? {
-                    keys: ["topic", "polarity"],
-                    label:
-                      polarity === "positive"
-                        ? "Praised"
-                        : polarity === "negative"
-                          ? "Complained about"
-                          : "Topic",
-                    value:
-                      TOPIC_LABELS[topic as keyof typeof TOPIC_LABELS] ?? topic,
-                  }
-                : null,
-              from
-                ? { keys: ["from"], label: "From", value: formatDateLong(from) }
-                : null,
-              to
-                ? { keys: ["to"], label: "To", value: formatDateLong(to) }
-                : null,
-              search
-                ? { keys: ["q"], label: "Text", value: `“${search}”` }
-                : null,
-            ]}
-          />
-        ) : null}
+          {hasFilters ? (
+            <ActiveFilters
+              params={params}
+              chips={[
+                propertyParam
+                  ? {
+                      keys: ["property"],
+                      label: "Property",
+                      value: names.get(Number(propertyParam)) ?? propertyParam,
+                    }
+                  : null,
+                band
+                  ? {
+                      keys: ["band"],
+                      label: "Rating",
+                      value: BAND_FILTER_LABEL[band] ?? band,
+                    }
+                  : null,
+                topic
+                  ? {
+                      keys: ["topic", "polarity"],
+                      label:
+                        polarity === "positive"
+                          ? "Praised"
+                          : polarity === "negative"
+                            ? "Complained about"
+                            : "Topic",
+                      value:
+                        TOPIC_LABELS[topic as keyof typeof TOPIC_LABELS] ??
+                        topic,
+                    }
+                  : null,
+                from
+                  ? {
+                      keys: ["from"],
+                      label: "From",
+                      value: formatDateLong(from),
+                    }
+                  : null,
+                to
+                  ? { keys: ["to"], label: "To", value: formatDateLong(to) }
+                  : null,
+                search
+                  ? { keys: ["q"], label: "Text", value: `“${search}”` }
+                  : null,
+              ]}
+            />
+          ) : null}
 
-        {/* Plain GET form: filters are in the URL, so they can be shared and
-          bookmarked, and the page works without client-side JavaScript. */}
-        <Card className="spotlight">
-          <form
-            method="get"
-            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6"
-          >
-            <Field label="Property" id="property">
-              <Select
-                id="property"
-                name="property"
-                defaultValue={propertyParam ?? ""}
-              >
-                <option value="">All properties</option>
-                {properties.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.assessment_label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-
-            <Field label="Rating" id="band">
-              <Select id="band" name="band" defaultValue={band ?? ""}>
-                <option value="">Any rating</option>
-                <option value="positive">Positive (8+)</option>
-                <option value="neutral">Neutral (6–7.9)</option>
-                <option value="negative">Negative (under 6)</option>
-              </Select>
-            </Field>
-
-            <Field label="Topic" id="topic">
-              <Select id="topic" name="topic" defaultValue={topic ?? ""}>
-                <option value="">Any topic</option>
-                {TOPICS.map((t) => (
-                  <option key={t} value={t}>
-                    {TOPIC_LABELS[t]}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-
-            <Field label="From" id="from">
-              <Input
-                id="from"
-                name="from"
-                type="date"
-                defaultValue={from ?? ""}
-              />
-            </Field>
-
-            <Field label="To" id="to">
-              <Input id="to" name="to" type="date" defaultValue={to ?? ""} />
-            </Field>
-
-            <Field label="Search text" id="q">
-              <Input
-                id="q"
-                name="q"
-                type="search"
-                placeholder="e.g. shower"
-                defaultValue={search ?? ""}
-              />
-            </Field>
-
-            {polarity ? (
-              <input type="hidden" name="polarity" value={polarity} />
-            ) : null}
-
-            <div className="flex items-end gap-2 border-t border-[var(--border)] pt-3 sm:col-span-2 lg:col-span-6">
-              <button
-                type="submit"
-                className="btn btn-primary rounded-full bg-[var(--accent)] px-5 py-2 text-sm font-semibold text-white"
-              >
-                Apply filters
-              </button>
-              {hasFilters ? (
-                <Link
-                  href="/reviews"
-                  className="btn btn-secondary rounded-full border border-[var(--border)] px-5 py-2 text-sm font-medium text-[var(--text-secondary)]"
-                >
-                  Clear
-                </Link>
-              ) : null}
-            </div>
-          </form>
-        </Card>
-
-        {reviews.length === 0 ? (
+          {/* A GET form: filters are in the URL, so they can be shared and
+          bookmarked. next/form turns the submit into an in-app navigation (no
+          full reload, so the results can animate in) and falls back to a
+          plain GET submission without client-side JavaScript. */}
           <Card className="spotlight">
-            <p className="py-6 text-center text-sm text-[var(--muted)]">
-              {hasFilters
-                ? "No reviews match these filters. Try widening the date range or clearing the topic."
-                : "No reviews stored yet. Run the collector with npm run collect."}
-            </p>
-          </Card>
-        ) : (
-          <ul className="space-y-3">
-            {reviews.map((review) => (
-              <li key={review.id}>
-                <ReviewCard
-                  review={review}
-                  propertyName={names.get(review.property_id) ?? "—"}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
+            <Form
+              action="/reviews"
+              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6"
+            >
+              <Field label="Property" id="property">
+                <Select
+                  id="property"
+                  name="property"
+                  defaultValue={propertyParam ?? ""}
+                >
+                  <option value="">All properties</option>
+                  {properties.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.assessment_label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
 
-        {lastPage > 1 ? (
-          <nav
-            className="flex items-center justify-between"
-            aria-label="Pagination"
-          >
-            <PageLink
-              params={params}
-              page={page - 1}
-              disabled={page <= 1}
-              direction="prev"
+              <Field label="Rating" id="band">
+                <Select id="band" name="band" defaultValue={band ?? ""}>
+                  <option value="">Any rating</option>
+                  <option value="positive">Positive (8+)</option>
+                  <option value="neutral">Neutral (6–7.9)</option>
+                  <option value="negative">Negative (under 6)</option>
+                </Select>
+              </Field>
+
+              <Field label="Topic" id="topic">
+                <Select id="topic" name="topic" defaultValue={topic ?? ""}>
+                  <option value="">Any topic</option>
+                  {TOPICS.map((t) => (
+                    <option key={t} value={t}>
+                      {TOPIC_LABELS[t]}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+
+              <Field label="From" id="from">
+                <Input
+                  id="from"
+                  name="from"
+                  type="date"
+                  defaultValue={from ?? ""}
+                />
+              </Field>
+
+              <Field label="To" id="to">
+                <Input id="to" name="to" type="date" defaultValue={to ?? ""} />
+              </Field>
+
+              <Field label="Search text" id="q">
+                <Input
+                  id="q"
+                  name="q"
+                  type="search"
+                  placeholder="e.g. shower"
+                  defaultValue={search ?? ""}
+                />
+              </Field>
+
+              {polarity ? (
+                <input type="hidden" name="polarity" value={polarity} />
+              ) : null}
+
+              <div className="flex items-end gap-2 border-t border-[var(--border)] pt-3 sm:col-span-2 lg:col-span-6">
+                <button
+                  type="submit"
+                  className="btn btn-primary rounded-full bg-[var(--accent)] px-5 py-2 text-sm font-semibold text-white"
+                >
+                  Apply filters
+                </button>
+                {hasFilters ? (
+                  <Link
+                    href="/reviews"
+                    className="btn btn-secondary rounded-full border border-[var(--border)] px-5 py-2 text-sm font-medium text-[var(--text-secondary)]"
+                  >
+                    Clear
+                  </Link>
+                ) : null}
+              </div>
+            </Form>
+          </Card>
+
+          {reviews.length === 0 ? (
+            <Card className="spotlight">
+              <p className="py-6 text-center text-sm text-[var(--muted)]">
+                {hasFilters
+                  ? "No reviews match these filters. Try widening the date range or clearing the topic."
+                  : "No reviews stored yet. Run the collector with npm run collect."}
+              </p>
+            </Card>
+          ) : (
+            <ul className="space-y-3">
+              {reviews.map((review, i) => (
+                // Results arrive top to bottom, 40ms apart. Capped, so the last
+                // card on a long page is not left waiting.
+                <li
+                  key={review.id}
+                  className="rise"
+                  style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
+                >
+                  <ReviewCard
+                    review={review}
+                    propertyName={names.get(review.property_id) ?? "—"}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {lastPage > 1 ? (
+            <nav
+              className="flex items-center justify-between"
+              aria-label="Pagination"
             >
-              Previous
-            </PageLink>
-            <span className="text-sm text-[var(--muted)]">
-              Page {page} of {lastPage}
-            </span>
-            <PageLink
-              params={params}
-              page={page + 1}
-              disabled={page >= lastPage}
-              direction="next"
-            >
-              Next
-            </PageLink>
-          </nav>
-        ) : null}
-      </div>
-    </SpotlightField>
+              <PageLink
+                params={params}
+                page={page - 1}
+                disabled={page <= 1}
+                direction="prev"
+              >
+                Previous
+              </PageLink>
+              <span className="text-sm text-[var(--muted)]">
+                Page {page} of {lastPage}
+              </span>
+              <PageLink
+                params={params}
+                page={page + 1}
+                disabled={page >= lastPage}
+                direction="next"
+              >
+                Next
+              </PageLink>
+            </nav>
+          ) : null}
+        </div>
+      </SpotlightField>
+    </PageTransition>
   );
 }
 

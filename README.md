@@ -570,20 +570,48 @@ Everything that moves has a job, and almost all of it plays once:
 - Sparklines draw themselves left to right, then mark where they end. Rings
   draw their arc; bars grow from the left; charts draw in.
 - Sections rise and fade in reading order, 60ms apart.
-- The aurora drifts continuously but very slowly (19–27s cycles), and the
-  freshness dot pings while the pipeline is healthy. These are the only two
-  things that loop.
+- The aurora drifts continuously but very slowly (19–27s cycles), two faint
+  beams of light cross the hero now and then, the freshness dot pings while the
+  pipeline is healthy, and the map pins pulse in their rating colour. All are
+  transform/opacity only.
 - A soft light follows the pointer across cards, with a brighter rim where it
   meets the border. It is lighting only — no lift and no pointer cursor — so a
   card that is not a link still does not promise a click. One delegated
   listener drives every card, and it is not attached at all on touch screens.
 
-Nothing is tied to scroll position, and nothing animates width, height or any
-other layout property. All of it sits inside
+**What changed, after Collect now or Refresh.** Figures re-count from their old
+value to the new one (not from zero); a property card whose figures moved glows
+once; reviews that just arrived slide into "Recent reviews" with a "New" tag
+that clears after six seconds. Nothing is marked on a plain page load, because
+nothing has changed. While a collection runs, the status chip shows one segment
+per property (gold working, green done, red failed) and names each property as
+it finishes; all of it comes from the run log, so the bar only moves when a
+property has really been collected.
+
+**Moving around.** Links between pages carry a `nav-page` transition type, and
+each page is wrapped in React's `<ViewTransition>` (`src/components/page-transition.tsx`),
+so the old page lifts away and the new one rises in. Refresh, Collect now and the
+browser's back button carry no type and stay still; the browser's default
+whole-page crossfade is switched off for the same reason. Browsers without the
+View Transitions API just swap pages. The Reviews filter form is `next/form`, so
+applying filters is an in-app navigation and the results arrive top to bottom,
+40ms apart. Hovering a chart bar eases the other bars back and the tooltip
+eases in. Loading skeletons now mirror each page, dark hero band included, with
+a soft shimmer.
+
+**The map** (`src/components/property-map.tsx`) is plain SVG with suburb-level
+positions and a hand-simplified harbour; it says "not to scale, positions
+approximate" on screen. On phones the labels would collide, so the pins are
+numbered and keyed underneath.
+
+The only scroll-tied effect is the topic rings: when they start below the fold,
+their arcs wait and fill as they scroll into view. Their percentages are shown
+from the start. Nothing animates width, height or any other layout property. All of it sits inside
 `@media (prefers-reduced-motion: no-preference)`, so for a reader who asked for
 less motion it is never applied, rather than applied and shortened. Verified
-both ways: with reduced motion the count-up starts on its final value and the
-aurora and sparkline animations report `none`.
+both ways: with reduced motion the count-up starts on its final value, the
+aurora and sparkline animations report `none`, view transitions run at zero
+duration, and a changed property card gets a static outline instead of a glow.
 
 ### What the design deliberately does not borrow
 
