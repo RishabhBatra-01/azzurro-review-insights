@@ -11,14 +11,28 @@
  *   - Verified in Milestone 1: headless is refused by this endpoint
  *     ("Request not supported", statusCode 400), so the browser runs headed.
  */
-import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
-import type { PropertyConfig } from '../properties';
-import type { FetchOptions, FetchResult, RawReview, ReviewSource } from './types';
+import {
+  chromium,
+  type Browser,
+  type BrowserContext,
+  type Page,
+} from "playwright";
+import type { PropertyConfig } from "../properties";
+import type {
+  FetchOptions,
+  FetchResult,
+  RawReview,
+  ReviewSource,
+} from "./types";
 
 const PAGE_SIZE = 10; // fixed by the endpoint
 const PACING_MS = 1200; // polite gap between calls
 
-type CapturedRequest = { url: string; headers: Record<string, string>; body: string };
+type CapturedRequest = {
+  url: string;
+  headers: Record<string, string>;
+  body: string;
+};
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -26,20 +40,22 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const replayableHeaders = (headers: Record<string, string>) =>
   Object.fromEntries(
     Object.entries(headers).filter(
-      ([k]) => !k.startsWith(':') && !['host', 'content-length'].includes(k.toLowerCase()),
+      ([k]) =>
+        !k.startsWith(":") &&
+        !["host", "content-length"].includes(k.toLowerCase()),
     ),
   );
 
 export class BookingGraphQLSource implements ReviewSource {
-  readonly name = 'booking-graphql';
+  readonly name = "booking-graphql";
   private browser?: Browser;
   private context?: BrowserContext;
 
   async open(): Promise<void> {
     this.browser = await chromium.launch({ headless: false });
     this.context = await this.browser.newContext({
-      locale: 'en-US',
-      timezoneId: 'Australia/Sydney',
+      locale: "en-US",
+      timezoneId: "Australia/Sydney",
       viewport: { width: 1440, height: 900 },
     });
   }
@@ -53,41 +69,51 @@ export class BookingGraphQLSource implements ReviewSource {
    * Load the property page and capture the ReviewList request it makes.
    * Tokens are short-lived, so this is re-run whenever a replay is rejected.
    */
-  private async primeSession(property: PropertyConfig): Promise<CapturedRequest> {
-    if (!this.context) throw new Error('source not opened');
+  private async primeSession(
+    property: PropertyConfig,
+  ): Promise<CapturedRequest> {
+    if (!this.context) throw new Error("source not opened");
     const page: Page = await this.context.newPage();
     let captured: CapturedRequest | null = null;
-    let diagnosis = '';
+    let diagnosis = "";
 
-    page.on('request', (req) => {
+    page.on("request", (req) => {
       if (captured) return;
       const body = req.postData();
-      if (req.url().includes('/dml/graphql') && body?.includes('ReviewList')) {
+      if (req.url().includes("/dml/graphql") && body?.includes("ReviewList")) {
         captured = { url: req.url(), headers: req.headers(), body };
       }
     });
 
     try {
       await page.goto(`${property.url}?lang=en-us`, {
-        waitUntil: 'domcontentloaded',
+        waitUntil: "domcontentloaded",
         timeout: 60_000,
       });
       // Wait for the button and the request to actually appear, not a fixed
       // delay: a fixed 2.5s missed the button on a cold first page load (seen
       // on GitHub Actions), so the property failed though nothing was blocked.
-      const trigger = page.getByRole('button', { name: /read all reviews/i }).first();
+      const trigger = page
+        .getByRole("button", { name: /read all reviews/i })
+        .first();
       const appeared = await trigger
-        .waitFor({ state: 'visible', timeout: 20_000 })
+        .waitFor({ state: "visible", timeout: 20_000 })
         .then(() => true)
         .catch(() => false);
       // The button is in the server-rendered HTML before the page's scripts
       // are ready to handle it, so an early click does nothing. Click, and if
       // no ReviewList request follows, try again once the page has settled.
-      for (let attempt = 1; appeared && !captured && attempt <= 3; attempt += 1) {
+      for (
+        let attempt = 1;
+        appeared && !captured && attempt <= 3;
+        attempt += 1
+      ) {
         await trigger.click().catch(() => {});
         await page
           .waitForRequest(
-            (req) => req.url().includes('/dml/graphql') && (req.postData() ?? '').includes('ReviewList'),
+            (req) =>
+              req.url().includes("/dml/graphql") &&
+              (req.postData() ?? "").includes("ReviewList"),
             { timeout: 6_000 },
           )
           .catch(() => {}); // reported below as "could not capture"
@@ -95,13 +121,15 @@ export class BookingGraphQLSource implements ReviewSource {
       if (!captured) {
         // Say what the page actually was, so a block is distinguishable from
         // a layout change. Title and a challenge marker only — no page content.
-        const html = await page.content().catch(() => '');
+        const html = await page.content().catch(() => "");
         // Markers only, not a verdict: Booking.com pages can carry WAF script
         // references even when served normally.
-        const markers = ['awsWafCookieDomainList', 'challenge.js', 'captcha'].filter((m) =>
-          html.toLowerCase().includes(m.toLowerCase()),
-        );
-        diagnosis = ` [page title: "${(await page.title().catch(() => '')).slice(0, 80)}"; WAF/captcha markers: ${markers.join(', ') || 'none'}]`;
+        const markers = [
+          "awsWafCookieDomainList",
+          "challenge.js",
+          "captcha",
+        ].filter((m) => html.toLowerCase().includes(m.toLowerCase()));
+        diagnosis = ` [page title: "${(await page.title().catch(() => "")).slice(0, 80)}"; WAF/captcha markers: ${markers.join(", ") || "none"}]`;
       }
     } finally {
       await page.close();
@@ -117,12 +145,12 @@ export class BookingGraphQLSource implements ReviewSource {
 
   /** Replay the captured request with our own paging variables. */
   private async fetchBatch(captured: CapturedRequest, skip: number) {
-    if (!this.context) throw new Error('source not opened');
+    if (!this.context) throw new Error("source not opened");
     const payload = JSON.parse(captured.body);
     const node = Array.isArray(payload) ? payload[0] : payload;
     node.variables.input.skip = skip;
     node.variables.input.limit = PAGE_SIZE;
-    node.variables.input.sorter = 'NEWEST_FIRST';
+    node.variables.input.sorter = "NEWEST_FIRST";
 
     const res = await this.context.request.post(captured.url, {
       headers: replayableHeaders(captured.headers),
@@ -132,26 +160,32 @@ export class BookingGraphQLSource implements ReviewSource {
     const json: any = await res.json().catch(() => null);
     const result = json?.data?.reviewListFrontend;
 
-    if (!result || result.__typename !== 'ReviewListFrontendResult') {
+    if (!result || result.__typename !== "ReviewListFrontendResult") {
       return {
         ok: false as const,
-        message: result?.message ?? `unexpected response (HTTP ${res.status()})`,
+        message:
+          result?.message ?? `unexpected response (HTTP ${res.status()})`,
       };
     }
     return {
       ok: true as const,
       reviews: (result.reviewCard ?? []) as RawReview[],
-      total: typeof result.reviewsCount === 'number' ? result.reviewsCount : null,
+      total:
+        typeof result.reviewsCount === "number" ? result.reviewsCount : null,
     };
   }
 
-  async fetchReviews(property: PropertyConfig, options: FetchOptions): Promise<FetchResult> {
+  async fetchReviews(
+    property: PropertyConfig,
+    options: FetchOptions,
+  ): Promise<FetchResult> {
     let captured = await this.primeSession(property);
     const raw: RawReview[] = [];
     let reportedTotal: number | null = null;
     let consecutiveKnown = 0;
     let stoppedEarly = false;
     let refreshed = false;
+    let seen = 0;
 
     for (let skip = 0; raw.length < options.maxReviews; skip += PAGE_SIZE) {
       const batch = await this.fetchBatch(captured, skip);
@@ -165,15 +199,19 @@ export class BookingGraphQLSource implements ReviewSource {
           skip -= PAGE_SIZE;
           continue;
         }
-        throw new Error(`ReviewList rejected for ${property.slug}: ${batch.message}`);
+        throw new Error(
+          `ReviewList rejected for ${property.slug}: ${batch.message}`,
+        );
       }
 
       refreshed = false;
       if (batch.total !== null) reportedTotal = batch.total;
       if (batch.reviews.length === 0) break;
 
+      seen += batch.reviews.length;
       for (const review of batch.reviews) {
-        const id = typeof review.reviewUrl === 'string' ? review.reviewUrl : null;
+        const id =
+          typeof review.reviewUrl === "string" ? review.reviewUrl : null;
         if (id && options.isKnown?.(id)) {
           consecutiveKnown += 1;
         } else {
@@ -185,7 +223,10 @@ export class BookingGraphQLSource implements ReviewSource {
       // Stop once we're clearly back into reviews we already hold. We require a
       // run of known reviews rather than a single one, because sort order is
       // not guaranteed to be perfectly chronological.
-      if (options.stopAfterKnown && consecutiveKnown >= options.stopAfterKnown) {
+      if (
+        options.stopAfterKnown &&
+        consecutiveKnown >= options.stopAfterKnown
+      ) {
         stoppedEarly = true;
         break;
       }
@@ -194,6 +235,6 @@ export class BookingGraphQLSource implements ReviewSource {
       await sleep(PACING_MS);
     }
 
-    return { raw, reportedTotal, stoppedEarly };
+    return { raw, reportedTotal, stoppedEarly, seen };
   }
 }

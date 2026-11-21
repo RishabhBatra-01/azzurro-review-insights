@@ -128,16 +128,18 @@ async function collect(
           });
           console.log("    via SearchApi");
         }
-        const { raw, reportedTotal, stoppedEarly } = result;
+        const { raw, reportedTotal, stoppedEarly, seen } = result;
 
         const { valid, rejected } = normalizeBatch(raw);
 
         // Health check: the source tells us how many reviews it has. Collecting
         // nothing from a property that advertises thousands means the parser
         // broke, not that there is no data.
-        if (raw.length === 0 && !stoppedEarly && (reportedTotal ?? 0) > 0) {
+        // "Nothing new" is fine; "nothing at all" from a source that says it has
+        // reviews means the parser or the page broke.
+        if (seen === 0 && (reportedTotal ?? 0) > 0) {
           throw new Error(
-            `collected 0 reviews but source reports ${reportedTotal} — parser likely broken`,
+            `source returned 0 reviews but reports ${reportedTotal} — parser likely broken`,
           );
         }
 

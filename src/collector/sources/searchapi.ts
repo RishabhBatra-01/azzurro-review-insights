@@ -141,12 +141,14 @@ export class SearchApiSource implements ReviewSource {
     let reportedTotal: number | null = null;
     let consecutiveKnown = 0;
     let stoppedEarly = false;
+    let seen = 0;
 
     for (let page = 1; raw.length < options.maxReviews; page += 1) {
       const body = await this.fetchPage(property, page);
       reportedTotal =
         num(body.search_information?.total_results) ?? reportedTotal;
       const reviews = body.reviews ?? [];
+      seen += reviews.length;
 
       for (const r of reviews) {
         const id = str(r.review_id);
@@ -174,6 +176,6 @@ export class SearchApiSource implements ReviewSource {
         break;
     }
 
-    return { raw, reportedTotal, stoppedEarly };
+    return { raw, reportedTotal, stoppedEarly, seen };
   }
 }

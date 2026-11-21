@@ -7,23 +7,24 @@ operational themes.
 Built for non-technical operations staff: every number on screen states what it
 is measuring and what it is measuring it against.
 
-**Current dataset: 1,925 real reviews across all four properties.** No synthetic
-or illustrative data is used anywhere.
+**Current dataset: 9,284 real reviews across all four properties — every
+review Booking.com lists for them.** No synthetic or illustrative data is used
+anywhere.
 
 | Brief label | Booking.com property | Reviews held | Property total |
 | --- | --- | ---: | ---: |
-| Olympic Hotel Paddington | Olympic Paddington Budget Hotel | 125 | 125 (complete) |
-| Potts Point | Venus Potts Point | 600 | 2,394 |
-| Central Sydney | Venus Surry Hills | 600 | 2,450 |
-| Darling Harbour | Azzurro Pod Hotel Darling Harbour | 600 | 4,313 |
+| Olympic Hotel Paddington | Olympic Paddington Budget Hotel | 125 | 125 |
+| Potts Point | Venus Potts Point | 2,394 | 2,394 |
+| Central Sydney | Venus Surry Hills | 2,450 | 2,450 |
+| Darling Harbour | Azzurro Pod Hotel Darling Harbour | 4,315 | 4,315 |
 
-We hold the **most recent** reviews per property, not the full history — every
-property is covered back to at least November 2025, and the overview only uses
-the last 12 weeks. A full backfill (`--full`, ~9,300 reviews, ~25 minutes of
-requests) would add only older reviews the dashboard never shows. The Reviews
-page states this coverage on screen, per property ("600 of 4,313 · since
-Nov 2025"), from Booking.com's count as recorded on each run, so the gap is not
-mistaken for missing data.
+Totals as reported by Booking.com on 21 Nov 2026, recorded on each run. The
+oldest reviews date from November 2023, exactly three years back, which suggests
+Booking.com lists only the last three years. The full history was collected in
+one `--full` run (~25 minutes, 7,357 older reviews, **0 rejected** by
+validation). Routine runs then add only new reviews on top. The Reviews page
+states coverage per property from Booking.com's own count ("4,315 (all)"), so a
+future gap would show rather than pass for missing data.
 
 ---
 
@@ -652,8 +653,9 @@ baseline and look ragged in a list of percentages.
   route for a hotel group that owns these properties is the Booking.com
   Extranet**, or the Connectivity Review API via a PMS/channel-manager partner —
   no WAF, no breakage, no grey area.
-- Only the most recent 600 reviews per property are stored by default. Deep
-  backfill with `--full` is untested beyond 600.
+- A routine run reads newest-first and stops at reviews already held, so it
+  never re-reads history; `--full` backfills everything (tested: 7,357 older
+  reviews in one run). Booking.com appears to list only three years of reviews.
 - Review counts shift between runs (Paddington reported 124 then 125; Potts Point
   2,396 then 2,394), so reviews are both added and removed upstream.
 
