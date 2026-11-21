@@ -7,6 +7,7 @@ import {
   ChartBar,
   ChatCircleDots,
   Compass,
+  Question,
   Buildings,
   SquaresFour,
   TrendUp,
@@ -24,6 +25,7 @@ import {
 const PAGES = [
   { href: '/', label: 'Portfolio Overview', icon: SquaresFour },
   { href: '/reviews', label: 'Reviews', icon: ChatCircleDots },
+  { href: '/guide', label: 'How to use', icon: Question },
 ];
 
 const SECTIONS = [

@@ -10,6 +10,9 @@ Booking.com guest reviews for four Sydney hotels and shows, in plain language:
 **Live demo:** https://azzurro-review-insights-five.vercel.app
 (no login needed; new reviews are collected automatically every day at 7am Sydney time)
 
+**New to the dashboard?** The in-app guide, [How to use](https://azzurro-review-insights-five.vercel.app/guide)
+(also in the sidebar), explains every screen and number in plain English for the operations team.
+
 **Data:** 9,284 real reviews, which is every review Booking.com lists for the four
 hotels. Nothing is made up or sample-generated.
 
@@ -499,6 +502,7 @@ Full method, measured accuracy and the fixes made after checking real tags:
 
 ## Further reading
 
+- [How to use](https://azzurro-review-insights-five.vercel.app/guide) (`src/app/guide/page.tsx`): the user guide for operations staff
 - [docs/collection.md](docs/collection.md): everything tried for collection, the
   evidence, the backup source and the health check results
 - [docs/insights.md](docs/insights.md): topic method, language handling, how
