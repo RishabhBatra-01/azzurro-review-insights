@@ -42,23 +42,26 @@ export default async function ReviewsPage({
   const search = one(params.q);
   const page = Math.max(1, Number(one(params.page) ?? 1) || 1);
 
-  const [properties, coverage] = await Promise.all([
-    allProperties(),
-    reviewCoverage(),
-  ]);
   const propertyId = propertyParam ? Number(propertyParam) : undefined;
 
-  const { reviews, total } = await searchReviews({
-    propertyId: Number.isFinite(propertyId) ? propertyId : undefined,
-    band,
-    topic,
-    polarity,
-    from,
-    to,
-    search,
-    limit: PAGE_SIZE,
-    offset: (page - 1) * PAGE_SIZE,
-  });
+  // The feed and the property/coverage data are independent, so they load in
+  // parallel; coverage reuses the property list instead of fetching it again.
+  const [[properties, coverage], { reviews, total }] = await Promise.all([
+    allProperties().then(
+      async (props) => [props, await reviewCoverage(props)] as const,
+    ),
+    searchReviews({
+      propertyId: Number.isFinite(propertyId) ? propertyId : undefined,
+      band,
+      topic,
+      polarity,
+      from,
+      to,
+      search,
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
+    }),
+  ]);
 
   const names = new Map(properties.map((p) => [p.id, p.assessment_label]));
   const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));

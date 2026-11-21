@@ -181,17 +181,39 @@ export type PropertyCoverage = {
  * lists. The collector keeps the most recent reviews per property, so the two
  * differ by design; showing both stops a reader mistaking that for missing data.
  */
-export async function reviewCoverage(): Promise<PropertyCoverage[]> {
-  const properties = await allProperties();
+export async function reviewCoverage(
+  properties: PropertyRow[],
+): Promise<PropertyCoverage[]> {
+  // Everything below is independent, so it runs as one parallel wave rather
+  // than a chain of round trips. The caller passes the property list it
+  // already loads, instead of this function fetching it again.
+  const [runs, perProperty] = await Promise.all([
+    // Tolerates a database without migration 0003: totals are then unknown
+    // rather than the page failing.
+    db()
+      .from("collection_run")
+      .select("property_id, source_total")
+      .not("source_total", "is", null)
+      .order("started_at", { ascending: false })
+      .limit(100),
+    Promise.all(
+      properties.map((p) =>
+        Promise.all([
+          db()
+            .from("review")
+            .select("id", { count: "exact", head: true })
+            .eq("property_id", p.id),
+          db()
+            .from("review")
+            .select("reviewed_on_sydney")
+            .eq("property_id", p.id)
+            .order("reviewed_at", { ascending: true })
+            .limit(1),
+        ]),
+      ),
+    ),
+  ]);
 
-  // Tolerates a database without migration 0003: totals are then unknown
-  // rather than the page failing.
-  const runs = await db()
-    .from("collection_run")
-    .select("property_id, source_total")
-    .not("source_total", "is", null)
-    .order("started_at", { ascending: false })
-    .limit(100);
   const listed = new Map<number, number>();
   for (const r of (runs.error ? [] : (runs.data ?? [])) as {
     property_id: number;
@@ -200,30 +222,17 @@ export async function reviewCoverage(): Promise<PropertyCoverage[]> {
     if (!listed.has(r.property_id)) listed.set(r.property_id, r.source_total);
   }
 
-  return Promise.all(
-    properties.map(async (p) => {
-      const [count, oldest] = await Promise.all([
-        db()
-          .from("review")
-          .select("id", { count: "exact", head: true })
-          .eq("property_id", p.id),
-        db()
-          .from("review")
-          .select("reviewed_on_sydney")
-          .eq("property_id", p.id)
-          .order("reviewed_at", { ascending: true })
-          .limit(1),
-      ]);
-      if (count.error)
-        throw new Error(`reviewCoverage failed: ${count.error.message}`);
-      return {
-        propertyId: p.id,
-        label: p.assessment_label,
-        held: count.count ?? 0,
-        listed: listed.get(p.id) ?? null,
-        oldest:
-          (oldest.data?.[0]?.reviewed_on_sydney as string | undefined) ?? null,
-      };
-    }),
-  );
+  return properties.map((p, i) => {
+    const [count, oldest] = perProperty[i]!;
+    if (count.error)
+      throw new Error(`reviewCoverage failed: ${count.error.message}`);
+    return {
+      propertyId: p.id,
+      label: p.assessment_label,
+      held: count.count ?? 0,
+      listed: listed.get(p.id) ?? null,
+      oldest:
+        (oldest.data?.[0]?.reviewed_on_sydney as string | undefined) ?? null,
+    };
+  });
 }
