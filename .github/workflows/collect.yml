@@ -30,6 +30,8 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      # Optional paid fallback, used per property only when the browser fails.
+      SEARCHAPI_API_KEY: ${{ secrets.SEARCHAPI_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 

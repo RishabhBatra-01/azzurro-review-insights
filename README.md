@@ -162,6 +162,32 @@ recorded per property (the freshness dot turns red), nothing is deleted, the
 log records the page title and any WAF/captcha markers, and the reliable
 fallback is a local run. Nothing is done to get around it.
 
+**Fallback: SearchApi.** When the browser collector fails for a property, the
+run fetches that property's newest reviews through
+[SearchApi](https://www.searchapi.io/docs/booking-reviews-api) (`booking_reviews`
+engine) instead, if `SEARCHAPI_API_KEY` is set. Decisions and trade-offs:
+
+- **It is a third-party, paid service that gets past Booking.com's bot
+  protection on its side.** It was added deliberately, after Booking.com began
+  refusing our own collector, so that the dashboard stays current. Data
+  collected this way is still Booking.com's reviews — SearchApi's `review_id`
+  is Booking.com's own id (checked against stored reviews), so both paths
+  deduplicate into the same rows.
+- **Same trust boundary.** Its responses are mapped into Booking.com's raw
+  shape and pass the same validator as every other review; fields it does not
+  provide are stored as unknown (null), not guessed. Covered by tests.
+- **Newest reviews only, never a backfill.** Each request returns 10 reviews
+  and costs a credit; the fallback stops after a full page of reviews already
+  held, so a routine run costs about one credit per failing property, three at
+  most. A full backfill (~930 requests) is out of reach of the free tier.
+- **Verified 21 Nov 2026:** with the browser refused for all four properties,
+  the run completed 4/4 via SearchApi using 4 credits. Which channel was used is
+  printed in the run log (`via SearchApi`); it is not yet stored per run in the
+  database.
+- **Credit budget:** if the browser keeps failing, the 6-hourly schedule uses
+  ~16 credits a day. On the free tier (100/month) that lasts about six days;
+  then requests fail, the run is recorded as failed, and nothing is deleted.
+
 **Every 6 hours** because the portfolio gets ~3 reviews a day and the
 dashboard reports by week: fresh enough, and four short runs a day stay light
 on Booking.com. It is one line in the workflow to change.
