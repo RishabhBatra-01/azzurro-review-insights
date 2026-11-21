@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { classifyReview, classifyText, isClassifiable } from '../src/insights/topics';
+import { classifyReview, classifyText, isClassifiable, isEnglish } from '../src/insights/topics';
 import { normalizeBatch } from '../src/collector/normalize';
 
 const fixture = JSON.parse(
@@ -80,10 +80,14 @@ describe('against real collected reviews', () => {
     expect(tagged.length / classifiable.length).toBeGreaterThan(0.5);
   });
 
-  it('excludes the non-English reviews present in the sample', () => {
-    const nonEnglish = valid.filter((r) => r.lang && r.lang !== 'en');
-    expect(nonEnglish.length).toBeGreaterThan(0); // fixture genuinely contains some
-    for (const r of nonEnglish) expect(classifyReview(r)).toEqual([]);
+  it('reads the English review Booking.com labelled "xu"', () => {
+    // A real review: "great location | had a little problem with the robo
+    // check in". Before the language fix it was skipped as foreign.
+    const xu = valid.find((r) => r.lang === 'xu');
+    expect(xu).toBeDefined();
+    const pairs = classifyReview(xu!).map((t) => `${t.topic}:${t.polarity}`);
+    expect(pairs).toContain('location:positive');
+    expect(pairs).toContain('check_in:negative');
   });
 });
 
@@ -99,5 +103,39 @@ describe('lexicon precision fixes found by evaluating real data', () => {
     expect(topicsOf('Great location near the station')).toContain('location');
     expect(topicsOf('The local area is lovely')).toContain('location');
     expect(topicsOf('Close to everything')).toContain('location');
+  });
+});
+
+describe('reviews Booking.com labels "xu" (language not identified)', () => {
+  it('reads them when the text is English', () => {
+    const review = { positive_text: 'great location', negative_text: 'the room was dirty', lang: 'xu' };
+    expect(isEnglish(review)).toBe(true);
+    expect(isClassifiable(review)).toBe(true);
+    expect(classifyReview(review).map((t) => `${t.topic}:${t.polarity}`)).toContain('cleanliness:negative');
+  });
+
+  it('still excludes them when the text is another language or script', () => {
+    expect(isEnglish({ positive_text: '早餐', lang: 'xu' })).toBe(false);
+    expect(isEnglish({ negative_text: 'la habitación estaba muy sucia y no es limpia', lang: 'xu' })).toBe(false);
+    expect(isEnglish({ negative_text: '-', lang: 'xu' })).toBe(false);
+  });
+
+  it('trusts "en" and keeps every other language code out', () => {
+    expect(isEnglish({ negative_text: 'dirty', lang: 'en' })).toBe(true);
+    expect(isEnglish({ negative_text: 'the room was dirty', lang: 'xt' })).toBe(false);
+    expect(isEnglish({ negative_text: 'the room was dirty', lang: 'fr' })).toBe(false);
+  });
+});
+
+describe('hair dryer', () => {
+  it('is a facility, not a cleanliness complaint', () => {
+    for (const text of ['No hair dryer was provided', 'no hairdryer', 'the hair-dryers were broken']) {
+      expect(topicsOf(text)).not.toContain('cleanliness');
+      expect(topicsOf(text)).toContain('facilities');
+    }
+  });
+
+  it('leaves real hair complaints as cleanliness', () => {
+    expect(topicsOf('There was hair in the shower')).toContain('cleanliness');
   });
 });

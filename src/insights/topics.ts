@@ -10,7 +10,9 @@
  *
  * Known limitations (measured, see README):
  *   - English only. Non-English reviews match nothing and are excluded from
- *     topic percentages rather than counted as "no issues".
+ *     topic percentages rather than counted as "no issues". Booking.com labels
+ *     about a fifth of reviews "xu" (language not identified); most of those
+ *     are English, so they are checked by their text instead (`isEnglish`).
  *   - Paraphrasing is missed: "the room smelled" only matches via "smell".
  *   - Negation is not handled: "not clean" and "very clean" both match
  *     cleanliness. Polarity comes from which field the text sits in, not from
@@ -75,6 +77,7 @@ const LEXICON: Record<Topic, string[]> = {
     'pool', 'gym', 'parking', 'car park', 'aircon', 'air con', 'air-con', 'air conditioning',
     'heating', 'heater', 'fan', 'tv', 'television', 'fridge', 'refrigerator', 'microwave',
     'kettle', 'breakfast', 'restaurant', 'bar', 'facilities', 'amenities',
+    'hairdryer', 'hairdryers',
   ],
   location: [
     'location', 'located', 'close to', 'near', 'nearby', 'walk', 'walking distance',
@@ -110,14 +113,63 @@ const COMPILED: Array<{ topic: Topic; term: string; re: RegExp }> = TOPICS.flatM
 
 export type TopicMatch = { topic: Topic; term: string };
 
+/*
+ * "Hair dryer" contains "hair", a cleanliness term ("hair in the shower").
+ * Joining it into one word first means it can only match facilities. Found
+ * by reading real tags: 5 of 8 cleanliness tags from "hair" were hair dryers.
+ */
+const HAIR_DRYER = /\bhair[\s-]?dryer(s?)\b/gi;
+
 /** Topics mentioned in a piece of text, with the term that triggered each. */
-export function classifyText(text: string | null | undefined): TopicMatch[] {
-  if (!text) return [];
+export function classifyText(raw: string | null | undefined): TopicMatch[] {
+  if (!raw) return [];
+  const text = raw.replace(HAIR_DRYER, 'hairdryer$1');
   const found = new Map<Topic, string>();
   for (const { topic, term, re } of COMPILED) {
     if (!found.has(topic) && re.test(text)) found.set(topic, term);
   }
   return [...found].map(([topic, term]) => ({ topic, term }));
+}
+
+type ReviewText = {
+  positive_text?: string | null;
+  negative_text?: string | null;
+  lang?: string | null;
+};
+
+// Common short words, used only to tell English apart from the other
+// Latin-script languages in the data (French, Spanish, German, Italian, Dutch,
+// Portuguese, Scandinavian).
+const ENGLISH_WORDS = new Set(
+  'the and was were is are very good great nice not but with for this that had have room staff clean place it we i to of in on at no so all would'.split(' '),
+);
+const OTHER_WORDS = new Set(
+  'el la los las muy y es con por para pero que le les et est très avec pour mais der die das und ist sehr mit nicht aber il lo molto di che een het zeer niet maar não com muito mas uma og er ikke men'.split(' '),
+);
+
+/**
+ * Whether a review's text can be read by the English lexicon.
+ *
+ * "en" is trusted. "xu" is Booking.com's label for a language it did not
+ * identify; checked against all 1,000 sampled "xu" reviews, 571 of the 574
+ * with text were English. So for "xu" the text decides: mostly Latin letters,
+ * and at least as many English short words as other-language ones. Any other
+ * code ("fr", "de", "xt", which is mostly Chinese) is excluded.
+ */
+export function isEnglish(review: ReviewText): boolean {
+  if (!review.lang || review.lang === 'en') return true;
+  if (review.lang !== 'xu') return false;
+
+  const text = `${review.positive_text ?? ''} ${review.negative_text ?? ''}`;
+  const letters = text.match(/\p{L}/gu) ?? [];
+  if (letters.length === 0) return false;
+  const latin = letters.filter((c) => /[a-z]/i.test(c)).length;
+  if (latin / letters.length < 0.9) return false;
+
+  const words = text.toLowerCase().match(/[a-z']+/g) ?? [];
+  const english = words.filter((w) => ENGLISH_WORDS.has(w)).length;
+  const other = words.filter((w) => OTHER_WORDS.has(w)).length;
+  return english >= other;
 }
 
 export type ReviewTopic = { topic: Topic; polarity: Polarity; matchedTerm: string };
@@ -126,13 +178,9 @@ export type ReviewTopic = { topic: Topic; polarity: Polarity; matchedTerm: strin
  * Classify one review. Positive and negative text are classified independently,
  * so the same review can praise and complain about different things.
  */
-export function classifyReview(review: {
-  positive_text?: string | null;
-  negative_text?: string | null;
-  lang?: string | null;
-}): ReviewTopic[] {
+export function classifyReview(review: ReviewText): ReviewTopic[] {
   // Only English is supported; see limitations above.
-  if (review.lang && review.lang !== 'en') return [];
+  if (!isEnglish(review)) return [];
 
   return [
     ...classifyText(review.positive_text).map(
@@ -145,11 +193,7 @@ export function classifyReview(review: {
 }
 
 /** True when a review can contribute to topic percentages at all. */
-export function isClassifiable(review: {
-  positive_text?: string | null;
-  negative_text?: string | null;
-  lang?: string | null;
-}): boolean {
-  if (review.lang && review.lang !== 'en') return false;
+export function isClassifiable(review: ReviewText): boolean {
+  if (!isEnglish(review)) return false;
   return Boolean(review.positive_text || review.negative_text);
 }

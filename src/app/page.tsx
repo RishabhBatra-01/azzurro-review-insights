@@ -62,7 +62,11 @@ import {
 import { TOPICS, TOPIC_LABELS, type Topic } from "../insights/topics";
 import { band, LOW_DATA_THRESHOLD } from "../insights/scoring";
 import { todayInSydney } from "../insights/weeks";
-import type { TopicMovement } from "../insights/metrics";
+import {
+  topTopic,
+  type TopicBreakdown,
+  type TopicMovement,
+} from "../insights/metrics";
 
 export const dynamic = "force-dynamic";
 
@@ -619,6 +623,32 @@ export default async function OverviewPage({
               note={`share of each topic's mentions that were praise, ${words.thisWeek}`}
             />
             <Card className="spotlight">
+              {data.topics.stats.length === 0 ? null : (
+                <div className="mb-5 grid gap-3 border-b border-[var(--border)] pb-5 md:grid-cols-2">
+                  <TopicHeadline
+                    breakdown={data.complaints}
+                    words={words}
+                    href={(topic) =>
+                      reviewsHref({ topic, polarity: "negative" })
+                    }
+                  />
+                  <TopicHeadline
+                    breakdown={data.praise}
+                    words={words}
+                    href={(topic) =>
+                      reviewsHref({ topic, polarity: "positive" })
+                    }
+                  />
+                  <p className="text-[11px] leading-relaxed text-[var(--muted)] md:col-span-2">
+                    Each share is out of the English reviews with text in
+                    Booking.com&apos;s &ldquo;Disliked&rdquo; (complaints) or
+                    &ldquo;Liked&rdquo; (praise) box, not out of all reviews or
+                    of reviews scored below 6: a review with no written
+                    complaint cannot name a topic. A review can mention more
+                    than one topic.
+                  </p>
+                </div>
+              )}
               {data.topics.stats.length === 0 ? (
                 <Note>
                   No reviews {words.thisWeek} carried English text, so no topics
@@ -647,10 +677,10 @@ export default async function OverviewPage({
                                 <Icon size={17} weight="duotone" />
                               </span>
                               <Ring
-                                percentage={t.positiveShare}
+                                percentage={(t.positive / t.mentions) * 100}
                                 hue={hue}
                                 lowData={t.lowData}
-                                label={`${label}: ${Math.round(t.positiveShare)}% of ${t.mentions} mention${
+                                label={`${label}: ${Math.round((t.positive / t.mentions) * 100)}% of ${t.mentions} mention${
                                   t.mentions === 1 ? "" : "s"
                                 } ${words.thisWeek} were praise`}
                               />
@@ -743,6 +773,60 @@ export default async function OverviewPage({
         </div>
       </SpotlightField>
     </PageTransition>
+  );
+}
+
+/**
+ * The brief's example insight, in its own words: "38% of this week's written
+ * complaints mentioned cleanliness". The count and denominator sit in the
+ * sentence so the percentage can never be read without its base.
+ */
+function TopicHeadline({
+  breakdown,
+  words,
+  href,
+}: {
+  breakdown: TopicBreakdown;
+  words: { thisWeek: string };
+  href: (topic: Topic) => string;
+}) {
+  const negative = breakdown.polarity === "negative";
+  const top = topTopic(breakdown);
+  const what = negative ? "a written complaint" : "written praise";
+  const reviews = (n: number) => `${n} review${n === 1 ? "" : "s"}`;
+
+  return (
+    <div className="rounded-xl bg-[var(--surface-sunken)] p-4">
+      <p className="eyebrow">{negative ? "Top complaint" : "Top praise"}</p>
+      {top ? (
+        <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+          <span className="numeral text-2xl font-semibold text-[var(--text)]">
+            {Math.round((top.count / top.denominator) * 100)}%
+          </span>{" "}
+          of the {reviews(top.denominator)} {words.thisWeek} with {what}{" "}
+          mentioned{" "}
+          {top.topics.map((topic, i) => (
+            <span key={topic}>
+              {i === 0 ? "" : i === top.topics.length - 1 ? " and " : ", "}
+              <Link
+                href={href(topic)}
+                transitionTypes={PAGE_NAV}
+                className="link-draw font-semibold text-[var(--text)]"
+              >
+                {TOPIC_LABELS[topic].toLowerCase()}
+              </Link>
+            </span>
+          ))}{" "}
+          ({top.count} of {top.denominator}).
+        </p>
+      ) : (
+        <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+          {breakdown.denominator === 0
+            ? `No reviews ${words.thisWeek} had ${what} in English.`
+            : `Only ${reviews(breakdown.denominator)} ${words.thisWeek} had ${what} in English, too few to give a share.`}
+        </p>
+      )}
+    </div>
   );
 }
 

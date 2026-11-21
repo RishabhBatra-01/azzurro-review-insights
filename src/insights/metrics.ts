@@ -245,3 +245,28 @@ export function topicMovement(
 
   return { movers, denominator: now.denominator, previousDenominator: then.denominator };
 }
+
+export type TopTopic = {
+  /** More than one when topics tie for the most mentions. */
+  topics: Topic[];
+  count: number;
+  denominator: number;
+  percentage: number;
+};
+
+/**
+ * The topic mentioned most, for a headline like "38% of this week's written
+ * complaints mentioned cleanliness". Null when nothing was mentioned or the
+ * denominator is under the low-data threshold: with two complaints, "50%"
+ * would be one review dressed up as a trend.
+ */
+export function topTopic(breakdown: TopicBreakdown): TopTopic | null {
+  const [first] = breakdown.stats;
+  if (!first || breakdown.denominator < LOW_DATA_THRESHOLD) return null;
+  return {
+    topics: breakdown.stats.filter((s) => s.count === first.count).map((s) => s.topic),
+    count: first.count,
+    denominator: breakdown.denominator,
+    percentage: first.percentage,
+  };
+}

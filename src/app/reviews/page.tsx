@@ -17,7 +17,7 @@ import { PageTransition } from "../../components/page-transition";
 import { Card, Note, Pill } from "../../components/ui";
 import { band } from "../../insights/scoring";
 import { formatDateLong } from "../../lib/format";
-import { TOPICS, TOPIC_LABELS } from "../../insights/topics";
+import { isEnglish, TOPICS, TOPIC_LABELS } from "../../insights/topics";
 
 export const dynamic = "force-dynamic";
 
@@ -458,7 +458,7 @@ function ReviewCard({
         </div>
       )}
 
-      {review.lang && review.lang !== "en" ? (
+      {(review.positive_text || review.negative_text) && !isEnglish(review) ? (
         <p className="mt-3 text-xs text-[var(--muted)]">
           Written in another language ({review.lang}) — excluded from topic
           analysis.

@@ -402,19 +402,62 @@ Every percentage states its denominator on screen, because the denominator is
 > contained a complaint. 16 other reviews had no written text or were not in
 > English.*
 
-This matters more than it sounds. In the collected data (1,000-row sample):
+This matters more than it sounds. Across all 9,284 collected reviews:
 
 | | |
 | --- | --- |
-| Reviews with **no written text at all** | **49%** |
-| Reviews **in English** | **50%** |
-| English **and** containing text | **27%** |
-| Reviews **missing a score** | **0%** |
+| Reviews with **no written text at all** | **3,761 (40.5%)** |
+| Labelled English (`en`) by Booking.com | **4,795 (51.6%)** |
+| Labelled `xu` (language not identified) | **1,800 (19.4%)** |
+| Labelled another language (`fr`, `es`, `de`, `ja`, `xt`…) | **2,689 (29.0%)** |
+| **Readable for topics** (English, with text) | **4,060 (43.7%)** |
+| Reviews **missing a score** | **0** |
 
 So **ratings and week-over-week trends use 100% of reviews**, but **topic
-analysis can only ever cover about 30%**. A naive implementation would run an
+analysis can only ever cover about 44%**. A naive implementation would run an
 English keyword list over everything, find nothing in the French reviews, and
-report that as "no issues mentioned" — understating every topic roughly threefold.
+report that as "no issues mentioned", understating every topic by more than
+half.
+
+### Which reviews count as English
+
+Booking.com labels each review with a language code. `en` is trusted. But
+about one review in five is labelled **`xu`**, which appears to mean "language
+not identified" (Booking.com does not document it). Reading them showed most
+are plainly English, for example *"great location | had a little problem with
+the robo check in…"*. Excluding them threw away over a quarter of the usable text (1,081 of 4,060).
+
+So for `xu` reviews the **text decides** (`isEnglish` in
+`src/insights/topics.ts`): the letters must be at least 90% Latin script, and
+the text must contain at least as many common English short words ("the",
+"was", "very"…) as common French, Spanish, German, Italian, Dutch, Portuguese
+or Scandinavian ones. Every other language code stays excluded, including
+`xt`, which turned out to be mostly Chinese.
+
+Result: **1,081 of the 1,085 `xu` reviews with text are now read**, raising the
+readable total from 2,979 to 4,060. The 4 still excluded were checked by eye:
+two are just "-", two are Chinese. The review page no longer marks an English
+`xu` review as "written in another language".
+
+Limit: a short `xu` review in another Latin-script language that uses none of
+the listed words (e.g. one word like "Perfetto") passes the check. It then
+simply matches no English topic, so it inflates a denominator by one rather
+than creating a wrong tag.
+
+### The headline insight
+
+The Overview leads the topics section with the brief's example, in its form:
+
+> **39%** of the 18 reviews that week with a written complaint mentioned
+> **facilities** (7 of 18).
+
+and the same for praise. The count and denominator are always in the sentence.
+**"Negative" here means a review with text in the Disliked box, not a review
+scored below 6**, and the page says so: a low score with no written text cannot
+name a topic, and a high score can still carry a complaint. If fewer than 3
+reviews had a written complaint, it says that instead of showing a percentage.
+Ties name every tied topic. The sentence follows the property and week filters,
+and each topic in it links to the reviews behind it.
 
 ### Classifier quality — what was actually measured
 
@@ -426,6 +469,11 @@ text. Findings:
 (`local area` / `surrounding area` kept), which removed **36 incorrect tags**
 across the dataset. Regression tests pin this.
 
+**Fixed:** `"hair"` (for "hair in the shower") was matching **"hair dryer"**:
+5 of the 8 cleanliness tags it produced were complaints about a missing hair
+dryer. "Hair dryer" is now read as one word and counts as *facilities*; real
+hair complaints stay *cleanliness*. Tested both ways.
+
 **Known, unfixed — polarity comes from which field the text sits in:**
 
 - A guest wrote *"It was clean"* in the **disliked** box. Tagged
@@ -433,7 +481,11 @@ across the dataset. Regression tests pin this.
 - *"Check-in had a small hiccup, but the staff resolved it quickly"* sits in the
   disliked box, so `staff` is tagged negative although the staff were praised.
 
-Keyword matching cannot fix either, because both are about sentiment *within* a
+- A guest who writes *"None, everything was clean"* in the **disliked** box gets
+  a `cleanliness/negative` tag. Rare: 12 of 9,902 tags come from disliked text
+  starting "nothing", "none" or "no complaints".
+
+Keyword matching cannot fix these, because they are about sentiment *within* a
 field. They are genuine limitations, not bugs.
 
 **Other known limitations:**

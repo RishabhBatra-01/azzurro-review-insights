@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   compare, compareByProperty, summarize, topicBreakdown, topicMovement, topicSentiment,
-  trend, type ReviewRow,
+  topTopic, trend, type ReviewRow, type TopicBreakdown,
 } from '../src/insights/metrics';
+import type { Topic } from '../src/insights/topics';
 import { recentWeeks } from '../src/insights/weeks';
 
 const WEEK = { start: '2026-11-16', end: '2026-11-22' };
@@ -228,5 +229,40 @@ describe('summarizeRuns', () => {
   it('returns null when nothing has ever run, rather than claiming freshness', async () => {
     const { summarizeRuns } = await import('../src/insights/collection');
     expect(summarizeRuns([])).toBeNull();
+  });
+});
+
+describe('topTopic', () => {
+  const breakdown = (denominator: number, counts: [Topic, number][]): TopicBreakdown => ({
+    polarity: 'negative',
+    denominator,
+    excluded: 0,
+    stats: counts.map(([topic, count]) => ({
+      topic,
+      count,
+      denominator,
+      percentage: Math.round((count / denominator) * 1000) / 10,
+    })),
+  });
+
+  it('names the most-mentioned topic with its share and denominator', () => {
+    expect(topTopic(breakdown(8, [['cleanliness', 3], ['noise', 1]]))).toEqual({
+      topics: ['cleanliness'],
+      count: 3,
+      denominator: 8,
+      percentage: 37.5,
+    });
+  });
+
+  it('names every topic tied for first', () => {
+    expect(topTopic(breakdown(10, [['noise', 4], ['staff', 4], ['value', 1]]))?.topics).toEqual([
+      'noise',
+      'staff',
+    ]);
+  });
+
+  it('says nothing when there is too little to go on', () => {
+    expect(topTopic(breakdown(2, [['cleanliness', 2]]))).toBeNull();
+    expect(topTopic(breakdown(9, []))).toBeNull();
   });
 });
