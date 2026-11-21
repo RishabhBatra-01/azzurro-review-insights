@@ -71,12 +71,22 @@ export class BookingGraphQLSource implements ReviewSource {
         waitUntil: 'domcontentloaded',
         timeout: 60_000,
       });
-      await page.waitForTimeout(2500);
+      // Wait for the button and the request to actually appear, not a fixed
+      // delay: a fixed 2.5s missed the button on a cold first page load (seen
+      // on GitHub Actions), so the property failed though nothing was blocked.
       const trigger = page.getByRole('button', { name: /read all reviews/i }).first();
-      if (await trigger.count()) {
+      const appeared = await trigger
+        .waitFor({ state: 'visible', timeout: 20_000 })
+        .then(() => true)
+        .catch(() => false);
+      if (appeared) {
         await trigger.click();
-        // Wait for the request rather than a fixed delay where possible.
-        await page.waitForTimeout(4000);
+        await page
+          .waitForRequest(
+            (req) => req.url().includes('/dml/graphql') && (req.postData() ?? '').includes('ReviewList'),
+            { timeout: 20_000 },
+          )
+          .catch(() => {}); // reported below as "could not capture"
       }
     } finally {
       await page.close();
@@ -84,7 +94,7 @@ export class BookingGraphQLSource implements ReviewSource {
 
     if (!captured) {
       throw new Error(
-        `could not capture a ReviewList request for ${property.slug} — the page may have changed`,
+        `could not capture a ReviewList request for ${property.slug} — the reviews button or request did not appear within 20s (page changed, or a challenge page was served)`,
       );
     }
     return captured;
