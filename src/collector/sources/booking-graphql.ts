@@ -57,6 +57,7 @@ export class BookingGraphQLSource implements ReviewSource {
     if (!this.context) throw new Error('source not opened');
     const page: Page = await this.context.newPage();
     let captured: CapturedRequest | null = null;
+    let diagnosis = '';
 
     page.on('request', (req) => {
       if (captured) return;
@@ -88,13 +89,20 @@ export class BookingGraphQLSource implements ReviewSource {
           )
           .catch(() => {}); // reported below as "could not capture"
       }
+      if (!captured) {
+        // Say what the page actually was, so a block is distinguishable from
+        // a layout change. Title and a challenge marker only — no page content.
+        const html = await page.content().catch(() => '');
+        const challenged = /awsWafCookieDomainList|challenge\.js|captcha/i.test(html);
+        diagnosis = ` [page title: "${(await page.title().catch(() => '')).slice(0, 80)}"; bot challenge: ${challenged ? 'yes' : 'no'}]`;
+      }
     } finally {
       await page.close();
     }
 
     if (!captured) {
       throw new Error(
-        `could not capture a ReviewList request for ${property.slug} — the reviews button or request did not appear within 20s (page changed, or a challenge page was served)`,
+        `could not capture a ReviewList request for ${property.slug} — the reviews button or request did not appear within 20s (page changed, or a challenge page was served)${diagnosis}`,
       );
     }
     return captured;
