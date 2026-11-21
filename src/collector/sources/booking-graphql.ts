@@ -80,12 +80,15 @@ export class BookingGraphQLSource implements ReviewSource {
         .waitFor({ state: 'visible', timeout: 20_000 })
         .then(() => true)
         .catch(() => false);
-      if (appeared) {
-        await trigger.click();
+      // The button is in the server-rendered HTML before the page's scripts
+      // are ready to handle it, so an early click does nothing. Click, and if
+      // no ReviewList request follows, try again once the page has settled.
+      for (let attempt = 1; appeared && !captured && attempt <= 3; attempt += 1) {
+        await trigger.click().catch(() => {});
         await page
           .waitForRequest(
             (req) => req.url().includes('/dml/graphql') && (req.postData() ?? '').includes('ReviewList'),
-            { timeout: 20_000 },
+            { timeout: 6_000 },
           )
           .catch(() => {}); // reported below as "could not capture"
       }
@@ -106,7 +109,7 @@ export class BookingGraphQLSource implements ReviewSource {
 
     if (!captured) {
       throw new Error(
-        `could not capture a ReviewList request for ${property.slug} — the reviews button or request did not appear within 20s (page changed, or a challenge page was served)${diagnosis}`,
+        `could not capture a ReviewList request for ${property.slug} — the reviews button did not appear, or clicking it 3 times made no review request (page changed, or a challenge page was served)${diagnosis}`,
       );
     }
     return captured;

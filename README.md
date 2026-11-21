@@ -149,18 +149,21 @@ workflow, and the chip follows it ("Starting collector…", "Collecting… 2 of
 4", then "Collected: 1 new review") from GitHub's run status and the
 `collection_run` table. Each run collects, then classifies new reviews.
 
-**What was actually observed on GitHub Actions (21 Nov 2026):** the first
-three GitHub-hosted runs got through Booking.com — 4/4 properties, ~50 seconds,
+**What was actually observed (21 Nov 2026), including a wrong turn.** The
+first GitHub-hosted runs got through Booking.com — 4/4 properties, ~50 seconds,
 two of them picking up a real new review, one triggered from the deployed
-site's button. After roughly six runs in 45 minutes, later runs loaded the
-property pages (correct titles) but the "Read all reviews" control never
-appeared, so 3–4 of 4 properties failed; the same code run from a home
-connection at the same moment succeeded. That pattern is consistent with
-Booking.com degrading pages for repeated data-centre traffic, though it is not
-proven. **So hosted collection is best-effort, not guaranteed.** Failures are
-recorded per property (the freshness dot turns red), nothing is deleted, the
-log records the page title and any WAF/captcha markers, and the reliable
-fallback is a local run. Nothing is done to get around it.
+site's button. Later runs, on GitHub and locally, began failing with "could not
+capture a ReviewList request", which was at first read as Booking.com blocking
+repeated traffic. **It was not.** Loading the page and inspecting it showed the
+"Read all reviews" button present and a click returning reviews. The cause was
+timing: the button is in the server-rendered HTML before the page's scripts can
+handle it, and a change meant to replace a fixed delay made the collector click
+too early, so nothing happened. The collector now retries the click (up to
+three times) until the review request appears; afterwards all four properties
+collected through the browser alone. The lesson recorded here: inspect the page
+before concluding that a site is blocking you. Failures are still recorded per
+property (the freshness dot turns red), nothing is deleted, and the failure
+log carries the page title and any WAF/captcha markers to tell the cases apart.
 
 **Fallback: SearchApi.** When the browser collector fails for a property, the
 run fetches that property's newest reviews through
@@ -168,8 +171,10 @@ run fetches that property's newest reviews through
 engine) instead, if `SEARCHAPI_API_KEY` is set. Decisions and trade-offs:
 
 - **It is a third-party, paid service that gets past Booking.com's bot
-  protection on its side.** It was added deliberately, after Booking.com began
-  refusing our own collector, so that the dashboard stays current. Data
+  protection on its side.** It was added while the browser collector was
+  failing (a timing bug, since fixed — see above, though it looked like
+  blocking at the time), and is kept as a safety net so the dashboard stays
+  current if the browser path breaks again. Data
   collected this way is still Booking.com's reviews — SearchApi's `review_id`
   is Booking.com's own id (checked against stored reviews), so both paths
   deduplicate into the same rows.
@@ -180,8 +185,8 @@ engine) instead, if `SEARCHAPI_API_KEY` is set. Decisions and trade-offs:
   and costs a credit; the fallback stops after a full page of reviews already
   held, so a routine run costs about one credit per failing property, three at
   most. A full backfill (~930 requests) is out of reach of the free tier.
-- **Verified 21 Nov 2026:** with the browser refused for all four properties,
-  the run completed 4/4 via SearchApi using 4 credits. Which channel was used is
+- **Verified 21 Nov 2026:** with the browser path failing for all four
+  properties, the run completed 4/4 via SearchApi using 4 credits. Which channel was used is
   printed in the run log (`via SearchApi`); it is not yet stored per run in the
   database.
 - **Credit budget:** if the browser keeps failing, the daily schedule uses
