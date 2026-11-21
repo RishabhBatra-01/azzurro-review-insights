@@ -25,6 +25,9 @@ export function CoverageStrip({
   const held = coverage.reduce((n, c) => n + c.held, 0);
   const allListed = coverage.every((c) => c.listed !== null);
   const listed = coverage.reduce((n, c) => n + (c.listed ?? 0), 0);
+  const heldAll = coverage.every(
+    (c) => c.listed !== null && c.held >= c.listed,
+  );
   // Checked, not assumed: true only if every property's history reaches back
   // past the window, or we hold everything Booking.com lists for it.
   const windowCovered = coverage.every(
@@ -50,7 +53,9 @@ export function CoverageStrip({
         ) : (
           " reviews"
         )}
-        : the most recent for each property, not its full history.{" "}
+        {heldAll
+          ? ": every review it lists for these properties."
+          : ": the most recent for each property, not its full history."}{" "}
         {windowCovered
           ? `The overview uses the last ${windowWeeks} weeks, and every property is held in full for that period.`
           : `Some properties are not held in full for the overview’s ${windowWeeks}-week window, so treat their trends with care.`}
