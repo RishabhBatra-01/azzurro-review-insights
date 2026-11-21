@@ -1,0 +1,887 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens — Azzurro review insights.
+ *
+ * Direction: "the concierge desk". Deep navy chrome with a gold mark, a warm
+ * off-white canvas, white paper for the data. The register is a good hotel's
+ * lobby: quiet, warm, expensive-feeling, and entirely in service of the guest
+ * information it carries.
+ *
+ * Gold runs in two tiers, because one gold cannot do both jobs:
+ *   --nav-accent  #d4af37  bright gold, DARK surfaces only. 8.31:1 on the
+ *                          navy; only 2.10:1 on white, so it must never
+ *                          appear on the light canvas.
+ *   --accent      #8a6d1f  bronze, the light-surface sibling. 4.90:1 on white
+ *                          and 4.50:1 on the canvas, so it clears body text
+ *                          on both and can carry links and active states.
+ *
+ * Three colour families, kept strictly apart:
+ *
+ *   --series-*  data. A diverging scale, blue <-> grey <-> red. Blue/red, not
+ *               green/red, because green/red is the one pair red-green
+ *               colourblind readers cannot separate. Validated against the
+ *               real card surfaces in both themes: worst colourblind-simulated
+ *               separation dE 8.4 light / 8.5 dark (target 8), normal-vision
+ *               18.1 / 17.2 (floor 15), every step >= 3:1 contrast.
+ *
+ *   --status-*  state: a rating moving up or down. Reserved, never reused as a
+ *               data colour, and always paired with an arrow and a word.
+ *
+ *   --accent    brand chrome only — nav, focus rings, links, active states.
+ *               Gold/bronze, a hue the data and status colours do not use, so
+ *               the accent can never be mistaken for a value. Its closest
+ *               approach to any data colour is the neutral grey, and it is
+ *               never drawn as a data mark.
+ *
+ * Every text pairing below was measured, not estimated.
+ */
+:root {
+  color-scheme: light;
+
+  /* surfaces & ink — warm neutrals, so the gold reads as gold and not mustard */
+  --bg: #f7f5f1;
+  --surface: #ffffff;
+  --surface-sunken: #faf8f5;
+  --border: #e8e4dc;
+  --border-strong: #d3cdc1;
+  --text: #1a1814; /* 16.28:1 on the canvas */
+  --text-secondary: #4a463e; /* 8.62:1 */
+  --muted: #6e6960; /* 5.01:1 */
+
+  /* brand chrome, light tier */
+  --accent: #8a6d1f; /* 4.90:1 on white, 4.50:1 on canvas */
+  --accent-strong: #6e5516; /* 7.06:1 — hover and pressed */
+  --accent-soft: #f7f1e0;
+
+  /* the sidebar keeps its own dark navy scale in both themes */
+  --nav-bg: #0e1a2b;
+  --nav-raised: #17273c;
+  --nav-active: #1e3350;
+  --nav-text: #eef2f7; /* 15.55:1 on the navy */
+  --nav-muted: #93a3b8; /* 6.80:1 */
+  --nav-accent: #d4af37; /* 8.31:1 — bright gold, dark surfaces only */
+  --nav-border: #1c2d44;
+
+  /*
+   * A single-series line (the portfolio average over time) is data, so it
+   * cannot wear the accent, but it carries no sentiment either, so it must
+   * not wear the positive blue. Deep slate: 7.26:1 on white, in the chrome's
+   * colour family without belonging to either scale.
+   */
+  --data-line: #2d4a6b;
+
+  /* data: diverging scale */
+  --series-positive: #2a78d6;
+  --series-neutral: #8a8880;
+  --series-negative: #e34948;
+
+  /* state indicators */
+  --status-good: #0d7a2e;
+  --status-bad: #c0352f;
+  --status-good-soft: #e7f4ea;
+  --status-bad-soft: #fcecea;
+
+  /*
+   * Topic identity hues, taken in fixed slot order from the validated
+   * categorical palette. These answer "which topic", never "how good" — they
+   * appear only on the small icon tiles, where all eight sit together and the
+   * hue does real work telling them apart. The sentiment scale keeps its own
+   * colours for every data mark, so a tile is never read as a value.
+   */
+  --topic-room_condition: #2a78d6;
+  --topic-noise: #c2541f;
+  --topic-cleanliness: #0d8a7a;
+  --topic-check_in: #b07800;
+  --topic-staff: #d1437a;
+  --topic-location: #008300;
+  --topic-facilities: #6250d6;
+  --topic-value: #e34948;
+
+  /* elevation — layered rather than one blur, so cards read as paper */
+  --shadow-card:
+    0 0 0 0.5px rgb(23 21 28 / 0.04), 0 1px 2px rgb(23 21 28 / 0.04),
+    0 2px 4px rgb(23 21 28 / 0.03);
+  --shadow-raised:
+    0 0 0 0.5px rgb(23 21 28 / 0.05), 0 1px 2px rgb(23 21 28 / 0.05),
+    0 4px 10px -2px rgb(23 21 28 / 0.06), 0 12px 24px -6px rgb(23 21 28 / 0.07);
+  --shadow-float:
+    0 2px 4px rgb(23 21 28 / 0.05), 0 10px 20px -4px rgb(23 21 28 / 0.08),
+    0 24px 44px -12px rgb(23 21 28 / 0.1);
+
+  --radius-card: 16px;
+
+  /* motion — timings, curve and distances */
+  --m-in: 150ms;
+  --m-out: 120ms;
+  --m-press: 90ms;
+  --m-card-in: 180ms;
+  --m-field: 140ms;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* A stronger decelerate for one-shot entrances: fast out of the gate, long
+     settle, so a staggered group reads as arriving rather than sliding. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* type */
+  --font-sans:
+    var(--font-jakarta), system-ui, -apple-system, "Segoe UI", Roboto,
+    sans-serif;
+  --font-display: var(--font-instrument), ui-serif, Georgia, serif;
+}
+
+/* Dark mode is stepped for the dark surfaces, not an inversion of the light set. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --bg: #0c1118;
+    --surface: #141b25;
+    --surface-sunken: #111821;
+    --border: #243040;
+    --border-strong: #334155;
+    --text: #e9eef5;
+    --text-secondary: #b3becd;
+    --muted: #8b97a8;
+
+    /* On dark surfaces the bright gold is already legible, so the two
+       gold tiers converge into one. */
+    --accent: #d8b547;
+    --accent-strong: #e5c76a;
+    --accent-soft: #241f10;
+
+    --nav-bg: #0a131f;
+    --nav-raised: #121e2e;
+    --nav-active: #19293d;
+    --nav-border: #162435;
+
+    --data-line: #8fb4dd;
+    --series-positive: #3987e5;
+    --series-neutral: #646b76;
+    --series-negative: #e66767;
+
+    --status-good: #35b85c;
+    --status-bad: #ef7b74;
+    --status-good-soft: #15291c;
+    --status-bad-soft: #2e1a1a;
+
+    --topic-room_condition: #3987e5;
+    --topic-noise: #e2703f;
+    --topic-cleanliness: #22c88b;
+    --topic-check_in: #d9a32b;
+    --topic-staff: #e87ba4;
+    --topic-location: #0ca30c;
+    --topic-facilities: #9085e9;
+    --topic-value: #e66767;
+
+    --shadow-card:
+      0 0 0 0.5px rgb(255 255 255 / 0.04), 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-raised:
+      0 0 0 0.5px rgb(255 255 255 / 0.05), 0 2px 4px rgb(0 0 0 / 0.4),
+      0 10px 24px -6px rgb(0 0 0 / 0.5);
+    --shadow-float:
+      0 2px 6px rgb(0 0 0 / 0.45), 0 12px 28px -6px rgb(0 0 0 / 0.55),
+      0 28px 52px -14px rgb(0 0 0 / 0.6);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0c1118;
+  --surface: #141b25;
+  --surface-sunken: #111821;
+  --border: #243040;
+  --border-strong: #334155;
+  --text: #e9eef5;
+  --text-secondary: #b3becd;
+  --muted: #8b97a8;
+
+  /* On dark surfaces the bright gold is already legible, so the two
+     gold tiers converge into one. */
+  --accent: #d8b547;
+  --accent-strong: #e5c76a;
+  --accent-soft: #241f10;
+
+  --nav-bg: #0a131f;
+  --nav-raised: #121e2e;
+  --nav-active: #19293d;
+  --nav-border: #162435;
+
+  --data-line: #8fb4dd;
+  --series-positive: #3987e5;
+  --series-neutral: #646b76;
+  --series-negative: #e66767;
+
+  --status-good: #35b85c;
+  --status-bad: #ef7b74;
+  --status-good-soft: #15291c;
+  --status-bad-soft: #2e1a1a;
+
+  --topic-room_condition: #3987e5;
+  --topic-noise: #e2703f;
+  --topic-cleanliness: #22c88b;
+  --topic-check_in: #d9a32b;
+  --topic-staff: #e87ba4;
+  --topic-location: #0ca30c;
+  --topic-facilities: #9085e9;
+  --topic-value: #e66767;
+
+  --shadow-card:
+    0 0 0 0.5px rgb(255 255 255 / 0.04), 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-raised:
+    0 0 0 0.5px rgb(255 255 255 / 0.05), 0 2px 4px rgb(0 0 0 / 0.4),
+    0 10px 24px -6px rgb(0 0 0 / 0.5);
+  --shadow-float:
+    0 2px 6px rgb(0 0 0 / 0.45), 0 12px 28px -6px rgb(0 0 0 / 0.55),
+    0 28px 52px -14px rgb(0 0 0 / 0.6);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-secondary: var(--text-secondary);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-series-positive: var(--series-positive);
+  --color-series-neutral: var(--series-neutral);
+  --color-series-negative: var(--series-negative);
+  --color-status-good: var(--status-good);
+  --color-status-bad: var(--status-bad);
+  --color-nav-bg: var(--nav-bg);
+  --color-nav-raised: var(--nav-raised);
+  --color-nav-active: var(--nav-active);
+  --color-nav-text: var(--nav-text);
+  --color-nav-muted: var(--nav-muted);
+  --color-nav-accent: var(--nav-accent);
+  --color-nav-border: var(--nav-border);
+
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  /* Aligned figures, so columns of scores line up and don't jitter on update. */
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Display numerals only — hero scores, stat tiles, per-review scores.
+ *
+ * NOT for small inline numbers in a list. The display face falls back to
+ * Georgia, which only ships old-style figures: 3 and 9 drop below the baseline,
+ * which looks characterful at 40px and ragged at 13px. Small numbers stay in
+ * the sans face, which has lining tabular figures, so columns of them align.
+ */
+/* Figures are set in the sans, not the display serif: tabular and lining, so a
+   column of ratings aligns and a count-up does not jitter in width. */
+.numeral {
+  font-family: var(--font-sans);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.035em;
+}
+
+/* An all-caps micro-label needs extra tracking to stay legible. */
+.eyebrow {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Visible focus on every interactive element, for keyboard users. */
+:where(a, button, input, select, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Respect a reduced-motion preference. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------------------------------------------------------------- motion ---
+ *
+ * Adapted from the taste-skill reference, keeping only what suits a dashboard:
+ * its hover/press/focus layer and its numbers. Its landing-page rules (hero
+ * entrances, per-screen sections, photography, shader scenes) are deliberately
+ * not used — this is a dense internal tool, not a marketing page.
+ *
+ * Three rules hold throughout:
+ *   - only transform, opacity, colour and shadow animate; never width, height,
+ *     margin or padding, which force layout on every frame;
+ *   - nothing ever resizes or pushes a neighbour;
+ *   - hover effects apply to fine pointers only, so a tap on a phone does not
+ *     leave an element stuck in its hover state.
+ */
+
+/* A card that is a link. A card that isn't stays perfectly still. */
+.card-link {
+  transition:
+    transform var(--m-card-in) var(--ease),
+    border-color var(--m-card-in) var(--ease),
+    box-shadow var(--m-card-in) var(--ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .card-link:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-strong);
+    box-shadow: 0 8px 24px -6px rgb(25 27 32 / 0.1);
+  }
+}
+
+.card-link:active {
+  transform: translateY(0);
+  transition-duration: var(--m-press);
+}
+
+/* Buttons step up on hover and sink on press, so both states are visible. */
+.btn {
+  transition:
+    transform var(--m-in) var(--ease),
+    background-color var(--m-in) var(--ease),
+    border-color var(--m-in) var(--ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover {
+    transform: translateY(-1px);
+  }
+  .btn-primary:hover {
+    filter: brightness(1.08);
+  }
+  .btn-secondary:hover {
+    background: var(--surface-sunken);
+    border-color: var(--border-strong);
+  }
+}
+
+.btn:active {
+  transform: translateY(1px) scale(0.985);
+  transition-duration: var(--m-press);
+}
+
+/* An underline that draws in from the left, rather than blinking on. */
+.link-draw {
+  position: relative;
+  text-decoration: none;
+}
+
+.link-draw::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--m-out) var(--ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .link-draw:hover::after,
+  /* When the whole row is the link, the label still carries the underline. */
+  .group:hover .link-draw::after {
+    transform: scaleX(1);
+    transition-duration: var(--m-in);
+  }
+}
+
+.link-draw:focus-visible::after {
+  transform: scaleX(1);
+}
+
+/* Arrows nudge in their direction of travel. */
+.m-arrow {
+  display: inline-block;
+  transition: transform var(--m-out) var(--ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .m-arrow-next:hover .m-arrow {
+    transform: translateX(3px);
+    transition-duration: var(--m-in);
+  }
+  .m-arrow-prev:hover .m-arrow {
+    transform: translateX(-3px);
+    transition-duration: var(--m-in);
+  }
+}
+
+/* Form controls: the accent border plus a soft ring, so focus is unmistakable. */
+.field-control {
+  transition:
+    border-color var(--m-field) var(--ease),
+    box-shadow var(--m-field) var(--ease);
+}
+
+.field-control:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  outline: none;
+}
+
+/* Sidebar items: a quiet raise on hover, never a colour jump. */
+.nav-item {
+  transition:
+    background-color var(--m-in) var(--ease),
+    color var(--m-in) var(--ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nav-item:hover {
+    background: var(--nav-raised);
+    color: var(--nav-text);
+  }
+}
+
+/* ---------------------------------------------------------------- motion
+ * Entrance and draw-in animation.
+ *
+ * These are gated behind `prefers-reduced-motion: no-preference` rather than
+ * merely shortened by the global guard, so a reader who has asked for less
+ * motion never has an element start at opacity 0 at all. Nothing here animates
+ * width, height or layout — only transform, opacity and stroke-dashoffset.
+ * Everything runs once on load; nothing is tied to scroll position, because a
+ * dashboard that withholds its numbers until you scroll past them is a worse
+ * dashboard.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes ring-draw {
+    from {
+      stroke-dashoffset: var(--ring-circumference);
+    }
+  }
+
+  @keyframes bar-grow {
+    from {
+      transform: scaleX(0);
+    }
+  }
+
+  @keyframes tile-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+  }
+
+  .rise {
+    animation: rise 460ms var(--ease-out) both;
+  }
+
+  .ring-value {
+    animation: ring-draw 900ms var(--ease-out) both;
+  }
+
+  .bar-fill {
+    transform-origin: left center;
+    animation: bar-grow 760ms var(--ease-out) both;
+  }
+
+  .tile-pop {
+    animation: tile-pop 420ms var(--ease-out) both;
+  }
+}
+
+/* An icon tile carrying a topic's identity hue. The tint is the hue itself at
+   low alpha so the tile always sits in the same colour family as its glyph. */
+.topic-tile {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 10px;
+  color: var(--tile-hue);
+  background: color-mix(in srgb, var(--tile-hue) 14%, var(--surface));
+  transition:
+    transform var(--m-in) var(--ease),
+    box-shadow var(--m-in) var(--ease);
+}
+
+:root[data-theme="dark"] .topic-tile,
+.dark .topic-tile {
+  background: color-mix(in srgb, var(--tile-hue) 20%, var(--surface));
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .topic-tile {
+    background: color-mix(in srgb, var(--tile-hue) 20%, var(--surface));
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .group:hover .topic-tile {
+    transform: scale(1.06);
+  }
+}
+
+/* ------------------------------------------------------- press & loading
+ * Clicking should answer immediately, before the data arrives.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .nav-item:hover {
+    background: var(--nav-raised);
+    color: var(--nav-text);
+  }
+}
+
+/* Press feedback applies on touch as well as mouse: it is confirmation that
+   the tap landed, which matters most on the device with no hover state. */
+.nav-item:active,
+.card-link:active {
+  transform: scale(0.985);
+}
+
+.nav-item,
+.card-link {
+  transition:
+    background-color var(--m-in) var(--ease),
+    color var(--m-in) var(--ease),
+    transform var(--m-press) var(--ease),
+    box-shadow var(--m-in) var(--ease);
+}
+
+/* Skeleton placeholder shown while a route loads. */
+.skeleton {
+  background: var(--surface-sunken);
+  border-radius: 8px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes skeleton-pulse {
+    50% {
+      opacity: 0.45;
+    }
+  }
+
+  .skeleton {
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+  }
+}
+
+/* A visible focus ring everywhere, not just where a component remembered. */
+:where(a, button, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.nav-item:focus-visible {
+  outline-color: var(--nav-accent);
+}
+
+/* ================================================================== hero
+ * The dark band that opens each page. It is a dark surface in both themes,
+ * like the sidebar, so it carries its own token scope (.on-dark) and every
+ * component placed inside it — badges, icon tiles, numbers — resolves to the
+ * dark values without knowing it is in a hero.
+ *
+ * Contrast was checked at the worst point the aurora can reach: the indigo and
+ * gold glows peaking together on the lightest end of the gradient, under a
+ * tile. Muted ink holds 5.20:1 there; body text 8.49:1.
+ */
+.on-dark {
+  --text: #f3f5fa;
+  --text-secondary: #cdd5e3;
+  --muted: #b8c3d4;
+  --border: rgb(255 255 255 / 0.12);
+  --border-strong: rgb(255 255 255 / 0.22);
+  --surface: rgb(8 13 30 / 0.35);
+  --surface-sunken: rgb(8 13 30 / 0.25);
+  --accent: #e2c158;
+  --accent-soft: rgb(226 193 88 / 0.14);
+  --status-good: #4ade80;
+  --status-bad: #fca5a0;
+  --status-good-soft: rgb(74 222 128 / 0.14);
+  --status-bad-soft: rgb(252 165 160 / 0.14);
+  --data-line: #8fb4dd; /* data, so never the gold accent — same ice blue as dark mode */
+  --topic-room_condition: #3987e5;
+  --topic-noise: #e2703f;
+  --topic-cleanliness: #22c88b;
+  --topic-check_in: #d9a32b;
+  --topic-staff: #e87ba4;
+  --topic-location: #0ca30c;
+  --topic-facilities: #9085e9;
+  --topic-value: #e66767;
+  color: var(--text);
+}
+
+.hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #0b1424 0%, #14204a 52%, #251a4f 100%);
+  box-shadow:
+    0 1px 2px rgb(11 20 36 / 0.2),
+    0 24px 48px -20px rgb(20 32 74 / 0.45);
+}
+
+/* Fine dot grid, faded out towards the edges so it reads as texture. */
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(
+    rgb(255 255 255 / 0.1) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+  mask-image: radial-gradient(
+    ellipse 75% 70% at 75% 25%,
+    #000 20%,
+    transparent 75%
+  );
+  pointer-events: none;
+}
+
+/* Three soft glows. Radial gradients rather than blurred blobs: they are soft
+   by construction, so no filter has to be recomputed while they move. */
+.aurora {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.aurora span {
+  position: absolute;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  will-change: transform;
+}
+
+.aurora span:nth-child(1) {
+  width: 60%;
+  top: -35%;
+  left: -12%;
+  background: radial-gradient(circle, rgb(99 102 241 / 0.26), transparent 62%);
+}
+
+.aurora span:nth-child(2) {
+  width: 50%;
+  top: -10%;
+  right: -14%;
+  background: radial-gradient(circle, rgb(20 184 166 / 0.18), transparent 62%);
+}
+
+.aurora span:nth-child(3) {
+  width: 55%;
+  bottom: -60%;
+  left: 28%;
+  background: radial-gradient(circle, rgb(212 175 55 / 0.14), transparent 62%);
+}
+
+/* Smoked glass: a dark translucent tile, not frosted white. It reads richer on
+   the gradient, keeps text contrast high, and needs no backdrop-filter — a
+   blur over a moving aurora would repaint every frame. */
+.glass {
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 0.07), rgb(255 255 255 / 0.02)),
+    rgb(8 13 30 / 0.35);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 18px;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.07),
+    0 12px 28px -14px rgb(0 0 0 / 0.5);
+}
+
+/* ======================================================= cursor spotlight
+ * A soft light that follows the pointer across a card, plus a brighter rim
+ * where it meets the border. Lighting only: no lift, no pointer cursor, so a
+ * card that is not a link still does not promise a click. Sits beneath the
+ * card's content (isolation + z-index -1), so it never tints the text.
+ */
+.spotlight {
+  position: relative;
+  isolation: isolate;
+}
+
+.spotlight::before,
+.spotlight::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 240ms var(--ease);
+}
+
+.spotlight::before {
+  background: radial-gradient(
+    380px circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in srgb, var(--accent) 9%, transparent),
+    transparent 50%
+  );
+}
+
+.spotlight::after {
+  padding: 1px;
+  background: radial-gradient(
+    260px circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in srgb, var(--accent) 55%, transparent),
+    transparent 60%
+  );
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .spotlight:hover::before,
+  .spotlight:hover::after {
+    opacity: 1;
+  }
+}
+
+/* ================================================================ pulse */
+.pulse {
+  position: relative;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--pulse, #4ade80);
+}
+
+/* ============================================================ motion */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes drift-a {
+    to {
+      transform: translate(14%, 10%) scale(1.15);
+    }
+  }
+  @keyframes drift-b {
+    to {
+      transform: translate(-12%, 14%) scale(0.9);
+    }
+  }
+  @keyframes drift-c {
+    to {
+      transform: translate(-10%, -12%) scale(1.2);
+    }
+  }
+  @keyframes ping {
+    75%,
+    100% {
+      transform: scale(2.8);
+      opacity: 0;
+    }
+  }
+  @keyframes draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  .aurora span:nth-child(1) {
+    animation: drift-a 19s ease-in-out infinite alternate;
+  }
+  .aurora span:nth-child(2) {
+    animation: drift-b 23s ease-in-out infinite alternate;
+  }
+  .aurora span:nth-child(3) {
+    animation: drift-c 27s ease-in-out infinite alternate;
+  }
+
+  .pulse[data-live]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: inherit;
+    animation: ping 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+
+  /* Sparklines draw themselves left to right, then mark where they end. */
+  .spark-line {
+    stroke-dasharray: 1;
+    animation: draw 1.3s var(--ease-out) 0.2s both;
+  }
+  .spark-dot {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: tile-pop 420ms var(--ease-out) 1.35s both;
+  }
+}
+
+/* ======================================================= refresh button */
+.refresh-btn {
+  background: rgb(255 255 255 / 0.06);
+  transition:
+    background-color var(--m-in) var(--ease),
+    color var(--m-in) var(--ease),
+    transform var(--m-press) var(--ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .refresh-btn:hover:not(:disabled) {
+    background: rgb(255 255 255 / 0.14);
+    color: var(--text);
+  }
+}
+
+.refresh-btn:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+.refresh-btn:disabled {
+  cursor: progress;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .spin {
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes bob {
+    50% {
+      transform: translateY(2px);
+    }
+  }
+  .bob {
+    animation: bob 1.1s var(--ease-out) infinite;
+  }
+}

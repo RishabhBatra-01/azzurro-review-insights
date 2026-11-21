@@ -1,0 +1,46 @@
+import type { ReactNode } from "react";
+
+/**
+ * The dark band that opens each page: aurora, dot grid, title. Everything
+ * passed in as `children` or `aside` renders inside the `.on-dark` token scope.
+ */
+export function PageHero({
+  eyebrow,
+  title,
+  subtitle,
+  aside,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  subtitle?: ReactNode;
+  aside?: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <section className="hero on-dark rise px-5 py-6 sm:px-8 sm:py-8">
+      <div className="aurora" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
+
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+        <div className="min-w-0 max-w-2xl">
+          <p className="eyebrow text-[var(--accent)]">{eyebrow}</p>
+          <h1 className="mt-2 font-[family-name:var(--font-display)] text-[2.4rem] leading-[1.05] tracking-tight sm:text-[3.1rem]">
+            {title}
+          </h1>
+          {subtitle ? (
+            <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)] sm:text-[15px]">
+              {subtitle}
+            </p>
+          ) : null}
+        </div>
+        {aside}
+      </div>
+
+      {children}
+    </section>
+  );
+}

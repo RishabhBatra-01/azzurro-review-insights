@@ -1,0 +1,489 @@
+{
+  "capturedAt": "2026-11-21",
+  "property": "olympic-paddington",
+  "sorter": "NEWEST_FIRST",
+  "skip": 0,
+  "reviewsCount": 124,
+  "reviewCard": [
+    {
+      "canChangeVote": false,
+      "reviewScore": 3,
+      "bookingDetails": {
+        "customerType": "COUPLES",
+        "stayStatus": "stayed",
+        "roomType": {
+          "__typename": "RoomTranslation",
+          "id": "1621129103",
+          "name": "Standard Double Room with Private External Bathroom"
+        },
+        "checkoutDate": "2026-11-16",
+        "checkinDate": "2026-11-15",
+        "numNights": 1,
+        "__typename": "BookingDetails",
+        "roomId": 1621129103
+      },
+      "reviewUrl": "db7af74897e78b71",
+      "positiveHighlights": null,
+      "partnerReply": null,
+      "guestDetails": {
+        "__typename": "GuestDetails",
+        "countryCode": "au",
+        "anonymous": false,
+        "avatarColor": null,
+        "showCountryFlag": true,
+        "avatarUrl": null,
+        "guestTypeTranslation": "Couple",
+        "countryName": "Australia",
+        "username": "Parker"
+      },
+      "isTranslatable": false,
+      "textDetails": {
+        "positiveText": "I liked how close it was to Allianz stadium. I liked the window opened.",
+        "negativeText": "The room wasn't clean. The window didnt have flyscreen. There was no air-conditioning. Didn't like the shower in the toilet. The fan provided was filthy with dust. The front door to get in was hard to open. And had to wait a while for the reception to attend. We didn't end up staying the night and left. Also no parking available ended up with a parking fine. It wasn't worth the money we paid.",
+        "lang": "en",
+        "__typename": "TextDetails",
+        "title": "Horrible",
+        "textTrivialFlag": 0
+      },
+      "helpfulVotesCount": 0,
+      "__typename": "ReviewCard",
+      "isApproved": true,
+      "negativeHighlights": null,
+      "photos": null,
+      "editUrl": null,
+      "reviewedDate": 1795122189
+    },
+    {
+      "reviewScore": 8,
+      "canChangeVote": false,
+      "bookingDetails": {
+        "checkoutDate": "2026-10-24",
+        "roomType": {
+          "id": "1621129103",
+          "__typename": "RoomTranslation",
+          "name": "Standard Double Room with Private External Bathroom"
+        },
+        "numNights": 1,
+        "checkinDate": "2026-10-23",
+        "customerType": "COUPLES",
+        "stayStatus": "stayed",
+        "roomId": 1621129103,
+        "__typename": "BookingDetails"
+      },
+      "positiveHighlights": null,
+      "reviewUrl": "dfaf2e51a735623c",
+      "partnerReply": null,
+      "textDetails": {
+        "lang": "en",
+        "negativeText": "We needed to enter some codes to open the toilets.\nThere was no lift.",
+        "positiveText": "Then location is very good.",
+        "title": "Average",
+        "textTrivialFlag": 0,
+        "__typename": "TextDetails"
+      },
+      "helpfulVotesCount": 0,
+      "isTranslatable": false,
+      "guestDetails": {
+        "showCountryFlag": true,
+        "countryCode": "au",
+        "__typename": "GuestDetails",
+        "avatarColor": null,
+        "anonymous": false,
+        "countryName": "Australia",
+        "username": "Farzaneh",
+        "guestTypeTranslation": "Couple",
+        "avatarUrl": null
+      },
+      "__typename": "ReviewCard",
+      "negativeHighlights": null,
+      "isApproved": true,
+      "photos": null,
+      "editUrl": null,
+      "reviewedDate": 1795060642
+    },
+    {
+      "reviewUrl": "8079082ee6a9fbc0",
+      "positiveHighlights": null,
+      "partnerReply": null,
+      "reviewScore": 1,
+      "canChangeVote": false,
+      "bookingDetails": {
+        "checkinDate": "2026-10-22",
+        "numNights": 1,
+        "roomType": {
+          "name": "Standard Double Room with Private External Bathroom",
+          "__typename": "RoomTranslation",
+          "id": "1621129103"
+        },
+        "checkoutDate": "2026-10-23",
+        "stayStatus": "stayed",
+        "customerType": "COUPLES",
+        "roomId": 1621129103,
+        "__typename": "BookingDetails"
+      },
+      "negativeHighlights": null,
+      "isApproved": true,
+      "photos": null,
+      "editUrl": null,
+      "reviewedDate": 1794985476,
+      "helpfulVotesCount": null,
+      "textDetails": {
+        "title": null,
+        "textTrivialFlag": 0,
+        "__typename": "TextDetails",
+        "lang": "en",
+        "negativeText": null,
+        "positiveText": null
+      },
+      "isTranslatable": false,
+      "guestDetails": {
+        "showCountryFlag": true,
+        "avatarColor": null,
+        "anonymous": false,
+        "countryCode": "au",
+        "__typename": "GuestDetails",
+        "username": "Gobi",
+        "countryName": "Australia",
+        "guestTypeTranslation": "Couple",
+        "avatarUrl": null
+      },
+      "__typename": "ReviewCard"
+    },
+    {
+      "reviewUrl": "d5574e207ff40eef",
+      "positiveHighlights": null,
+      "partnerReply": null,
+      "reviewScore": 6,
+      "canChangeVote": false,
+      "bookingDetails": {
+        "checkoutDate": "2026-11-14",
+        "roomType": {
+          "name": "Standard Double Room with Private External Bathroom",
+          "id": "1621129103",
+          "__typename": "RoomTranslation"
+        },
+        "numNights": 1,
+        "checkinDate": "2026-11-13",
+        "customerType": "SOLO_TRAVELLERS",
+        "stayStatus": "stayed",
+        "roomId": 1621129103,
+        "__typename": "BookingDetails"
+      },
+      "negativeHighlights": null,
+      "isApproved": true,
+      "editUrl": null,
+      "photos": null,
+      "reviewedDate": 1794982908,
+      "isTranslatable": false,
+      "guestDetails": {
+        "showCountryFlag": true,
+        "countryCode": "au",
+        "__typename": "GuestDetails",
+        "avatarColor": null,
+        "anonymous": false,
+        "username": "Georgia",
+        "countryName": "Australia",
+        "guestTypeTranslation": "Solo traveler",
+        "avatarUrl": null
+      },
+      "textDetails": {
+        "textTrivialFlag": 0,
+        "title": "Decent enough",
+        "__typename": "TextDetails",
+        "lang": "en",
+        "negativeText": "It was strange to be greeted by zoom call, and my room had no drinking glasses. There werent many food options nearby, and it wasnt that close to the city. It was originally booked for a concert that got cancelled, if the concert had happened it would have been a convenient location.",
+        "positiveText": "It was a good room for a one night single person stay, it was clean and quiet, and easy to find, bed was pretty comfy."
+      },
+      "helpfulVotesCount": 0,
+      "__typename": "ReviewCard"
+    },
+    {
+      "reviewScore": 3,
+      "canChangeVote": false,
+      "bookingDetails": {
+        "__typename": "BookingDetails",
+        "roomId": 1621129103,
+        "customerType": "SOLO_TRAVELLERS",
+        "stayStatus": "stayed",
+        "checkoutDate": "2026-11-15",
+        "roomType": {
+          "name": "Standard Double Room with Private External Bathroom",
+          "id": "1621129103",
+          "__typename": "RoomTranslation"
+        },
+        "numNights": 5,
+        "checkinDate": "2026-11-10"
+      },
+      "reviewUrl": "da5d2cd7ca6cf5a9",
+      "positiveHighlights": null,
+      "partnerReply": null,
+      "isTranslatable": false,
+      "guestDetails": {
+        "countryCode": "au",
+        "__typename": "GuestDetails",
+        "avatarColor": null,
+        "anonymous": false,
+        "showCountryFlag": true,
+        "guestTypeTranslation": "Solo traveler",
+        "avatarUrl": null,
+        "username": "Michael",
+        "countryName": "Australia"
+      },
+      "textDetails": {
+        "__typename": "TextDetails",
+        "title": null,
+        "textTrivialFlag": 0,
+        "positiveText": null,
+        "negativeText": null,
+        "lang": "en"
+      },
+      "helpfulVotesCount": null,
+      "__typename": "ReviewCard",
+      "negativeHighlights": null,
+      "isApproved": true,
+      "photos": null,
+      "reviewedDate": 1794980151,
+      "editUrl": null
+    },
+    {
+      "editUrl": null,
+      "photos": null,
+      "reviewedDate": 1794960882,
+      "isApproved": true,
+      "negativeHighlights": null,
+      "__typename": "ReviewCard",
+      "guestDetails": {
+        "anonymous": false,
+        "avatarColor": null,
+        "__typename": "GuestDetails",
+        "countryCode": "au",
+        "showCountryFlag": true,
+        "avatarUrl": null,
+        "guestTypeTranslation": "Couple",
+        "username": "Nancy",
+        "countryName": "Australia"
+      },
+      "isTranslatable": false,
+      "textDetails": {
+        "__typename": "TextDetails",
+        "title": null,
+        "textTrivialFlag": 0,
+        "negativeText": null,
+        "positiveText": null,
+        "lang": "en"
+      },
+      "helpfulVotesCount": null,
+      "partnerReply": null,
+      "reviewUrl": "72683ea0c8ca8a54",
+      "positiveHighlights": null,
+      "bookingDetails": {
+        "roomType": {
+          "name": "Superior Double Room (Ensuite)",
+          "__typename": "RoomTranslation",
+          "id": "1621129101"
+        },
+        "checkoutDate": "2026-11-18",
+        "checkinDate": "2026-11-17",
+        "numNights": 1,
+        "customerType": "COUPLES",
+        "stayStatus": "stayed",
+        "roomId": 1621129101,
+        "__typename": "BookingDetails"
+      },
+      "canChangeVote": false,
+      "reviewScore": 10
+    },
+    {
+      "canChangeVote": false,
+      "reviewScore": 1,
+      "bookingDetails": {
+        "checkinDate": "2026-11-14",
+        "numNights": 2,
+        "roomType": {
+          "id": "1621129105",
+          "__typename": "RoomTranslation",
+          "name": "Standard Double Room (Ensuite)"
+        },
+        "checkoutDate": "2026-11-16",
+        "stayStatus": "stayed",
+        "customerType": "SOLO_TRAVELLERS",
+        "roomId": 1621129105,
+        "__typename": "BookingDetails"
+      },
+      "reviewUrl": "86be75f8e32e4242",
+      "positiveHighlights": null,
+      "partnerReply": null,
+      "textDetails": {
+        "__typename": "TextDetails",
+        "title": "NEVER AGAIN.  THIRD WORLD COUNTRY EXPERIENCE . NO CARE FACTOR .",
+        "textTrivialFlag": 0,
+        "positiveText": "GOING OUT THE DOOR.",
+        "negativeText": "NO AIR CONDITIONING, NO CUPS, NO MILK AND THEY DID NOT CARE",
+        "lang": "en"
+      },
+      "helpfulVotesCount": 1,
+      "guestDetails": {
+        "showCountryFlag": true,
+        "countryCode": "au",
+        "__typename": "GuestDetails",
+        "avatarColor": null,
+        "anonymous": false,
+        "countryName": "Australia",
+        "username": "Tim",
+        "guestTypeTranslation": "Solo traveler",
+        "avatarUrl": null
+      },
+      "isTranslatable": false,
+      "__typename": "ReviewCard",
+      "isApproved": true,
+      "negativeHighlights": null,
+      "photos": null,
+      "editUrl": null,
+      "reviewedDate": 1794865465
+    },
+    {
+      "photos": null,
+      "reviewedDate": 1794805708,
+      "editUrl": null,
+      "isApproved": true,
+      "negativeHighlights": null,
+      "__typename": "ReviewCard",
+      "textDetails": {
+        "negativeText": "had a little problem with the robo check in but it took time and I worked it out.",
+        "positiveText": "great location",
+        "lang": "xu",
+        "__typename": "TextDetails",
+        "title": null,
+        "textTrivialFlag": 0
+      },
+      "helpfulVotesCount": 0,
+      "guestDetails": {
+        "guestTypeTranslation": "Solo traveler",
+        "avatarUrl": null,
+        "countryName": "Australia",
+        "username": "Burrell",
+        "avatarColor": null,
+        "anonymous": false,
+        "countryCode": "au",
+        "__typename": "GuestDetails",
+        "showCountryFlag": true
+      },
+      "isTranslatable": false,
+      "partnerReply": null,
+      "positiveHighlights": null,
+      "reviewUrl": "0792d4af495282ed",
+      "bookingDetails": {
+        "__typename": "BookingDetails",
+        "roomId": 1621129101,
+        "stayStatus": "stayed",
+        "customerType": "SOLO_TRAVELLERS",
+        "checkinDate": "2026-10-20",
+        "numNights": 1,
+        "checkoutDate": "2026-10-21",
+        "roomType": {
+          "id": "1621129101",
+          "__typename": "RoomTranslation",
+          "name": "Superior Double Room (Ensuite)"
+        }
+      },
+      "canChangeVote": false,
+      "reviewScore": 8
+    },
+    {
+      "reviewUrl": "b8cded90400181ca",
+      "positiveHighlights": null,
+      "partnerReply": null,
+      "reviewScore": 10,
+      "canChangeVote": false,
+      "bookingDetails": {
+        "checkoutDate": "2026-11-01",
+        "roomType": {
+          "name": "Standard Double Room (Ensuite)",
+          "id": "1621129105",
+          "__typename": "RoomTranslation"
+        },
+        "numNights": 1,
+        "checkinDate": "2026-10-31",
+        "customerType": "COUPLES",
+        "stayStatus": "stayed",
+        "roomId": 1621129105,
+        "__typename": "BookingDetails"
+      },
+      "negativeHighlights": null,
+      "isApproved": true,
+      "reviewedDate": 1794790733,
+      "photos": null,
+      "editUrl": null,
+      "textDetails": {
+        "title": null,
+        "textTrivialFlag": 0,
+        "__typename": "TextDetails",
+        "lang": "en",
+        "positiveText": null,
+        "negativeText": null
+      },
+      "helpfulVotesCount": null,
+      "isTranslatable": false,
+      "guestDetails": {
+        "countryCode": "au",
+        "__typename": "GuestDetails",
+        "avatarColor": null,
+        "anonymous": false,
+        "showCountryFlag": true,
+        "guestTypeTranslation": "Couple",
+        "avatarUrl": null,
+        "countryName": "Australia",
+        "username": "Lara"
+      },
+      "__typename": "ReviewCard"
+    },
+    {
+      "photos": null,
+      "reviewedDate": 1794749969,
+      "editUrl": null,
+      "isApproved": true,
+      "negativeHighlights": null,
+      "__typename": "ReviewCard",
+      "guestDetails": {
+        "showCountryFlag": true,
+        "avatarColor": null,
+        "anonymous": false,
+        "countryCode": "au",
+        "__typename": "GuestDetails",
+        "countryName": "Australia",
+        "username": "Cullam",
+        "guestTypeTranslation": "Solo traveler",
+        "avatarUrl": null
+      },
+      "isTranslatable": false,
+      "helpfulVotesCount": null,
+      "textDetails": {
+        "title": null,
+        "textTrivialFlag": 0,
+        "__typename": "TextDetails",
+        "lang": "en",
+        "negativeText": null,
+        "positiveText": null
+      },
+      "partnerReply": null,
+      "positiveHighlights": null,
+      "reviewUrl": "479c33626b4c3c43",
+      "bookingDetails": {
+        "numNights": 2,
+        "checkinDate": "2026-11-14",
+        "roomType": {
+          "name": "Standard Double Room with Private External Bathroom",
+          "__typename": "RoomTranslation",
+          "id": "1621129103"
+        },
+        "checkoutDate": "2026-11-16",
+        "stayStatus": "stayed",
+        "customerType": "SOLO_TRAVELLERS",
+        "roomId": 1621129103,
+        "__typename": "BookingDetails"
+      },
+      "canChangeVote": false,
+      "reviewScore": 1
+    }
+  ]
+}

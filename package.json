@@ -1,0 +1,40 @@
+{
+  "name": "azzurro-reviews",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "collect": "tsx src/collector/run.ts",
+    "classify": "tsx src/insights/classify.ts",
+    "health": "tsx src/insights/health.ts",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "export": "tsx src/db/export.ts"
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "@supabase/supabase-js": "^2.119.2",
+    "@tailwindcss/postcss": "^4.3.5",
+    "dotenv": "^18.0.10",
+    "next": "^16.4.6",
+    "playwright": "^1.65.1",
+    "postcss": "^8.5.33",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "recharts": "^3.11.0",
+    "server-only": "^0.0.1",
+    "tailwindcss": "^4.3.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "vitest": "^5.1.1"
+  }
+}

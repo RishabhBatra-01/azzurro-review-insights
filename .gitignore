@@ -1,0 +1,40 @@
+# Secrets — never commit
+.env
+.env.local
+.env*.local
+
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+dist/
+out/
+
+# Test / tooling
+coverage/
+.vitest/
+
+# Collector output (scratch runs, not the committed sample)
+data/raw/
+*.log
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Third-party agent skills (vendored, 43MB) — not part of the deliverable
+.agents/
+.claude/skills/
+.taste-skill/
+skills-lock.json
+
+# Local working files — not part of the deliverable
+image.png
+image copy.png
+CLAUDE.md
+AGENTS.md
+ASSESSMENT.md
+.claude/
+*.tsbuildinfo
